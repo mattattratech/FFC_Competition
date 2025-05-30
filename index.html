@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Jigsaw Puzzle</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .session-info {
+            background: #f0f8ff;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .session-id {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #2196F3;
+            font-size: 18px;
+        }
+        
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+        
+        .status {
+            font-size: 16px;
+            margin: 5px 0;
+        }
+        
+        .status.not-started { color: #666; }
+        .status.in-progress { color: #FF9800; }
+        .status.completed { color: #4CAF50; }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .btn {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #45a049;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn.secondary {
+            background: #2196F3;
+        }
+        
+        .btn.secondary:hover {
+            background: #1976D2;
+        }
+        
+        .btn.danger {
+            background: #f44336;
+        }
+        
+        .btn.danger:hover {
+            background: #d32f2f;
+        }
+        
+        .btn.success {
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        select {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        
+        .game-area {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .canvas-container {
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: #f9f9f9;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+            border-radius: 8px;
+        }
+        
+        .info {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+        
+        .completion-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .completion-time {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 20px 0;
+        }
+        
+        .results-code {
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏆 Competition Jigsaw Puzzle</h1>
+        
+        <div class="session-info">
+            <div>Session ID: <span class="session-id" id="sessionId"></span></div>
+            <div class="timer" id="timer">00:00:00</div>
+            <div class="status not-started" id="status">Ready to start - Move your first piece to begin!</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="piecesPlaced">0</div>
+                <div class="stat-label">Pieces Placed</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="totalPieces">64</div>
+                <div class="stat-label">Total Pieces</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="accuracy">0%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn secondary" onclick="useDefaultImage()">
+                🖼️ Use Sample Image
+            </button>
+            <select id="difficulty">
+                <option value="8" selected>Challenge (8x8)</option>
+            </select>
+            <button class="btn secondary" onclick="resetPuzzle()">
+                🔄 Reset Puzzle
+            </button>
+            <button class="btn danger" onclick="clearProgress()">
+                🗑️ Clear All Progress
+            </button>
+        </div>
+        
+        <div class="game-area">
+            <div class="canvas-container">
+                <canvas id="puzzleCanvas" width="400" height="400"></canvas>
+                <div class="info">Puzzle Board - Drop pieces here!</div>
+            </div>
+            <div class="canvas-container">
+                <canvas id="piecesCanvas" width="400" height="400"></canvas>
+                <div class="info">Puzzle Pieces - Drag to solve!</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="completion-modal" id="completionModal">
+        <div class="modal-content">
+            <h2>🎉 Puzzle Completed! 🎉</h2>
+            <div class="completion-time" id="finalTime"></div>
+            <p>Congratulations! You've successfully completed the puzzle.</p>
+            
+            <h3>Your Results:</h3>
+            <div class="results-code" id="resultsCode"></div>
+            
+            <div style="margin: 20px 0;">
+                <button class="btn success" onclick="copyResults()">📋 Copy Results</button>
+                <button class="btn secondary" onclick="downloadScreenshot()">📷 Download Screenshot</button>
+                <button class="btn" onclick="shareResults()">📤 Share Results</button>
+            </div>
+            
+            <button class="btn secondary" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        class CompetitionJigsawPuzzle {
+            constructor() {
+                this.puzzleCanvas = document.getElementById('puzzleCanvas');
+                this.piecesCanvas = document.getElementById('piecesCanvas');
+                this.puzzleCtx = this.puzzleCanvas.getContext('2d');
+                this.piecesCtx = this.piecesCanvas.getContext('2d');
+                
+                this.sessionId = this.generateSessionId();
+                this.image = null;
+                this.pieces = [];
+                this.gridSize = 8;
+                this.pieceWidth = 0;
+                this.pieceHeight = 0;
+                this.draggedPiece = null;
+                this.dragOffset = { x: 0, y: 0 };
+                
+                // Timer and progress tracking
+                this.startTime = null;
+                this.endTime = null;
+                this.timerInterval = null;
+                this.gameStarted = false;
+                this.gameCompleted = false;
+                this.moveCount = 0;
+                this.correctMoves = 0;
+                
+                this.initializeSession();
+                this.initEventListeners();
+                this.loadFromStorage();
+            }
+            
+            generateSessionId() {
+                const timestamp = Date.now().toString(36);
+                const random = Math.random().toString(36).substr(2, 5);
+                return `PUZZLE-${timestamp}-${random}`.toUpperCase();
+            }
+            
+            initializeSession() {
+                document.getElementById('sessionId').textContent = this.sessionId;
+                this.updateDisplay();
+            }
+            
+            initEventListeners() {
+                document.getElementById('difficulty').addEventListener('change', (e) => {
+                    this.gridSize = parseInt(e.target.value);
+                    if (this.image) this.createPuzzle();
+                });
+                
+                // Mouse events
+                this.piecesCanvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.piecesCanvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.piecesCanvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                
+                // Touch events
+                this.piecesCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e));
+                this.piecesCanvas.addEventListener('touchmove', (e) => this.onTouchMove(e));
+                this.piecesCanvas.addEventListener('touchend', (e) => this.onTouchEnd(e));
+                
+                // Auto-save every 5 seconds
+                setInterval(() => this.saveToStorage(), 5000);
+            }
+            
+            saveToStorage() {
+                if (!this.pieces.length) return;
+                
+                const gameState = {
+                    sessionId: this.sessionId,
+                    gridSize: this.gridSize,
+                    pieces: this.pieces.map(p => ({
+                        id: p.id,
+                        correctRow: p.correctRow,
+                        correctCol: p.correctCol,
+                        currentRow: p.currentRow,
+                        currentCol: p.currentCol,
+                        x: p.x,
+                        y: p.y,
+                        placed: p.placed
+                    })),
+                    gameStarted: this.gameStarted,
+                    gameCompleted: this.gameCompleted,
+                    startTime: this.startTime,
+                    endTime: this.endTime,
+                    moveCount: this.moveCount,
+                    correctMoves: this.correctMoves,
+                    imageData: this.image ? this.image.src : null
+                };
+                
+                localStorage.setItem('puzzleGameState', JSON.stringify(gameState));
+            }
+            
+            loadFromStorage() {
+                const saved = localStorage.getItem('puzzleGameState');
+                if (!saved) {
+                    this.createDefaultImage();
+                    return;
+                }
+                
+                try {
+                    const gameState = JSON.parse(saved);
+                    
+                    // Restore basic state
+                    this.gridSize = gameState.gridSize;
+                    this.gameStarted = gameState.gameStarted;
+                    this.gameCompleted = gameState.gameCompleted;
+                    this.startTime = gameState.startTime;
+                    this.endTime = gameState.endTime;
+                    this.moveCount = gameState.moveCount || 0;
+                    this.correctMoves = gameState.correctMoves || 0;
+                    
+                    // Update difficulty selector
+                    document.getElementById('difficulty').value = this.gridSize;
+                    
+                    // Restore image and pieces
+                    if (gameState.imageData) {
+                        this.image = new Image();
+                        this.image.onload = () => {
+                            this.pieceWidth = 400 / this.gridSize;
+                            this.pieceHeight = 400 / this.gridSize;
+                            this.pieces = gameState.pieces;
+                            this.render();
+                            this.updateDisplay();
+                            
+                            if (this.gameStarted && !this.gameCompleted) {
+                                this.startTimer();
+                            }
+                        };
+                        this.image.src = gameState.imageData;
+                    } else {
+                        this.createDefaultImage();
+                    }
+                    
+                } catch (e) {
+                    console.error('Failed to load saved game:', e);
+                    this.createDefaultImage();
+                }
+            }
+            
+            createDefaultImage() {
+                // Use the uploaded football player image
+                this.image = new Image();
+                this.image.crossOrigin = 'anonymous';
+                this.image.onload = () => this.createPuzzle();
+                
+                // Base64 encoded version of your football player image
+                this.image.src = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAGQAZADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD2aiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAK
+            
+            loadImage(file) {
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.image = new Image();
+                    this.image.onload = () => this.createPuzzle();
+                    this.image.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            createPuzzle() {
+                this.resetGame();
+                this.pieces = [];
+                this.pieceWidth = 400 / this.gridSize;
+                this.pieceHeight = 400 / this.gridSize;
+                
+                // Create pieces
+                for (let row = 0; row < this.gridSize; row++) {
+                    for (let col = 0; col < this.gridSize; col++) {
+                        const piece = {
+                            id: row * this.gridSize + col,
+                            correctRow: row,
+                            correctCol: col,
+                            currentRow: -1,
+                            currentCol: -1,
+                            x: 0,
+                            y: 0,
+                            placed: false
+                        };
+                        this.pieces.push(piece);
+                    }
+                }
+                
+                this.shufflePieces();
+                this.updateDisplay();
+                this.render();
+            }
+            
+            shufflePieces() {
+                if (!this.pieces.length) return;
+                
+                // Reset all pieces
+                this.pieces.forEach(piece => {
+                    piece.placed = false;
+                    piece.currentRow = -1;
+                    piece.currentCol = -1;
+                });
+                
+                // Randomly position pieces
+                const margin = 8;
+                const availableWidth = 400 - margin * 2;
+                const availableHeight = 400 - margin * 2;
+                const piecesPerRow = Math.floor(availableWidth / (this.pieceWidth + margin));
+                
+                this.pieces.forEach((piece, index) => {
+                    const row = Math.floor(index / piecesPerRow);
+                    const col = index % piecesPerRow;
+                    piece.x = col * (this.pieceWidth + margin) + margin;
+                    piece.y = row * (this.pieceHeight + margin) + margin;
+                });
+                
+                // Shuffle array
+                for (let i = this.pieces.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.pieces[i], this.pieces[j]] = [this.pieces[j], this.pieces[i]];
+                }
+                
+                this.render();
+            }
+            
+            startTimer() {
+                if (this.timerInterval) return;
+                
+                this.timerInterval = setInterval(() => {
+                    this.updateTimer();
+                }, 1000);
+            }
+            
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+            
+            updateTimer() {
+                if (!this.startTime) return;
+                
+                const now = this.gameCompleted ? this.endTime : Date.now();
+                const elapsed = Math.floor((now - this.startTime) / 1000);
+                
+                const hours = Math.floor(elapsed / 3600);
+                const minutes = Math.floor((elapsed % 3600) / 60);
+                const seconds = elapsed % 60;
+                
+                const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                document.getElementById('timer').textContent = timeString;
+            }
+            
+            updateDisplay() {
+                const placedPieces = this.pieces.filter(p => p.placed).length;
+                const totalPieces = this.pieces.length;
+                const progress = totalPieces > 0 ? (placedPieces / totalPieces) * 100 : 0;
+                const accuracy = this.moveCount > 0 ? Math.round((this.correctMoves / this.moveCount) * 100) : 0;
+                
+                document.getElementById('piecesPlaced').textContent = placedPieces;
+                document.getElementById('totalPieces').textContent = totalPieces;
+                document.getElementById('accuracy').textContent = accuracy + '%';
+                document.getElementById('progressFill').style.width = progress + '%';
+                
+                // Update status
+                const statusEl = document.getElementById('status');
+                if (this.gameCompleted) {
+                    statusEl.textContent = 'Puzzle completed! 🎉';
+                    statusEl.className = 'status completed';
+                } else if (this.gameStarted) {
+                    statusEl.textContent = `In progress - ${placedPieces}/${totalPieces} pieces placed`;
+                    statusEl.className = 'status in-progress';
+                } else {
+                    statusEl.textContent = 'Ready to start - Move your first piece to begin!';
+                    statusEl.className = 'status not-started';
+                }
+            }
+            
+            render() {
+                // Clear both canvases
+                this.puzzleCtx.clearRect(0, 0, 400, 400);
+                this.piecesCtx.clearRect(0, 0, 400, 400);
+                
+                // Draw grid on puzzle canvas
+                this.puzzleCtx.strokeStyle = '#ddd';
+                this.puzzleCtx.lineWidth = 1;
+                for (let i = 0; i <= this.gridSize; i++) {
+                    const pos = i * this.pieceWidth;
+                    this.puzzleCtx.beginPath();
+                    this.puzzleCtx.moveTo(pos, 0);
+                    this.puzzleCtx.lineTo(pos, 400);
+                    this.puzzleCtx.stroke();
+                    
+                    this.puzzleCtx.beginPath();
+                    this.puzzleCtx.moveTo(0, pos);
+                    this.puzzleCtx.lineTo(400, pos);
+                    this.puzzleCtx.stroke();
+                }
+                
+                // Draw pieces
+                this.pieces.forEach(piece => {
+                    if (piece.placed) {
+                        this.drawPiece(this.puzzleCtx, piece, 
+                            piece.currentCol * this.pieceWidth, 
+                            piece.currentRow * this.pieceHeight);
+                    } else {
+                        this.drawPiece(this.piecesCtx, piece, piece.x, piece.y);
+                    }
+                });
+            }
+            
+            drawPiece(ctx, piece, x, y) {
+                ctx.save();
+                
+                // Draw piece shadow
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 5;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                
+                // Draw the piece image
+                ctx.drawImage(
+                    this.image,
+                    piece.correctCol * this.pieceWidth, piece.correctRow * this.pieceHeight,
+                    this.pieceWidth, this.pieceHeight,
+                    x, y,
+                    this.pieceWidth, this.pieceHeight
+                );
+                
+                // Draw border
+                ctx.shadowColor = 'transparent';
+                ctx.strokeStyle = piece.placed && 
+                    piece.currentRow === piece.correctRow && 
+                    piece.currentCol === piece.correctCol ? '#4CAF50' : '#333';
+                ctx.lineWidth = piece.placed && 
+                    piece.currentRow === piece.correctRow && 
+                    piece.currentCol === piece.correctCol ? 3 : 2;
+                ctx.strokeRect(x, y, this.pieceWidth, this.pieceHeight);
+                
+                ctx.restore();
+            }
+            
+            getMousePos(canvas, e) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+            
+            getTouchPos(canvas, e) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: e.touches[0].clientX - rect.left,
+                    y: e.touches[0].clientY - rect.top
+                };
+            }
+            
+            findPieceAt(x, y) {
+                for (let i = this.pieces.length - 1; i >= 0; i--) {
+                    const piece = this.pieces[i];
+                    if (!piece.placed &&
+                        x >= piece.x && x <= piece.x + this.pieceWidth &&
+                        y >= piece.y && y <= piece.y + this.pieceHeight) {
+                        return piece;
+                    }
+                }
+                return null;
+            }
+            
+            onMouseDown(e) {
+                const pos = this.getMousePos(this.piecesCanvas, e);
+                this.draggedPiece = this.findPieceAt(pos.x, pos.y);
+                
+                if (this.draggedPiece) {
+                    this.dragOffset.x = pos.x - this.draggedPiece.x;
+                    this.dragOffset.y = pos.y - this.draggedPiece.y;
+                }
+            }
+            
+            onMouseMove(e) {
+                if (this.draggedPiece) {
+                    const pos = this.getMousePos(this.piecesCanvas, e);
+                    this.draggedPiece.x = pos.x - this.dragOffset.x;
+                    this.draggedPiece.y = pos.y - this.dragOffset.y;
+                    this.render();
+                }
+            }
+            
+            onMouseUp(e) {
+                if (this.draggedPiece) {
+                    this.checkDrop(e);
+                    this.draggedPiece = null;
+                }
+            }
+            
+            onTouchStart(e) {
+                e.preventDefault();
+                const pos = this.getTouchPos(this.piecesCanvas, e);
+                this.draggedPiece = this.findPieceAt(pos.x, pos.y);
+                
+                if (this.draggedPiece) {
+                    this.dragOffset.x = pos.x - this.draggedPiece.x;
+                    this.dragOffset.y = pos.y - this.draggedPiece.y;
+                }
+            }
+            
+            onTouchMove(e) {
+                e.preventDefault();
+                if (this.draggedPiece) {
+                    const pos = this.getTouchPos(this.piecesCanvas, e);
+                    this.draggedPiece.x = pos.x - this.dragOffset.x;
+                    this.draggedPiece.y = pos.y - this.dragOffset.y;
+                    this.render();
+                }
+            }
+            
+            onTouchEnd(e) {
+                e.preventDefault();
+                if (this.draggedPiece) {
+                    this.checkDrop(e);
+                    this.draggedPiece = null;
+                }
+            }
+            
+            checkDrop(e) {
+                // Start game if not started
+                if (!this.gameStarted) {
+                    this.gameStarted = true;
+                    this.startTime = Date.now();
+                    this.startTimer();
+                }
+                
+                this.moveCount++;
+                
+                // Check if piece is dropped on puzzle canvas
+                const puzzleRect = this.puzzleCanvas.getBoundingClientRect();
+                
+                let clientX, clientY;
+                if (e.type.includes('touch')) {
+                    clientX = e.changedTouches[0].clientX;
+                    clientY = e.changedTouches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                
+                if (clientX >= puzzleRect.left && clientX <= puzzleRect.right &&
+                    clientY >= puzzleRect.top && clientY <= puzzleRect.bottom) {
+                    
+                    // Calculate grid position
+                    const x = clientX - puzzleRect.left;
+                    const y = clientY - puzzleRect.top;
+                    const col = Math.floor(x / this.pieceWidth);
+                    const row = Math.floor(y / this.pieceHeight);
+                    
+                    if (row >= 0 && row < this.gridSize && col >= 0 && col < this.gridSize) {
+                        // Check if position is empty
+                        const occupiedPiece = this.pieces.find(p => 
+                            p.placed && p.currentRow === row && p.currentCol === col);
+                        
+                        if (!occupiedPiece) {
+                            this.draggedPiece.placed = true;
+                            this.draggedPiece.currentRow = row;
+                            this.draggedPiece.currentCol = col;
+                            
+                            // Check if correct placement
+                            if (row === this.draggedPiece.correctRow && col === this.draggedPiece.correctCol) {
+                                this.correctMoves++;
+                            }
+                            
+                            this.render();
+                            this.updateDisplay();
+                            this.checkWin();
+                            this.saveToStorage();
+                        }
+                    }
+                }
+            }
+            
+            checkWin() {
+                const allPlaced = this.pieces.every(piece => piece.placed);
+                const allCorrect = this.pieces.every(piece => 
+                    piece.currentRow === piece.correctRow && 
+                    piece.currentCol === piece.correctCol);
+                
+                if (allPlaced && allCorrect && !this.gameCompleted) {
+                    this.gameCompleted = true;
+                    this.endTime = Date.now();
+                    this.stopTimer();
+                    this.updateDisplay();
+                    this.showCompletionModal();
+                    this.saveToStorage();
+                }
+            }
+            
+            showCompletionModal() {
+                const totalTime = this.endTime - this.startTime;
+                const hours = Math.floor(totalTime / (1000 * 60 * 60));
+                const minutes = Math.floor((totalTime % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((totalTime % (1000 * 60)) / 1000);
+                
+                const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                document.getElementById('finalTime').textContent = timeString;
+                
+                // Generate results code
+                const resultsCode = this.generateResultsCode(totalTime);
+                document.getElementById('resultsCode').textContent = resultsCode;
+                
+                document.getElementById('completionModal').style.display = 'flex';
+            }
+            
+            generateResultsCode(totalTime) {
+                const accuracy = this.moveCount > 0 ? Math.round((this.correctMoves / this.moveCount) * 100) : 0;
+                const difficulty = this.gridSize;
+                const timeInSeconds = Math.floor(totalTime / 1000);
+                
+                return `PUZZLE-RESULT:${this.sessionId}:TIME:${timeInSeconds}s:GRID:${difficulty}x${difficulty}:MOVES:${this.moveCount}:ACCURACY:${accuracy}%:COMPLETED:${new Date().toISOString()}`;
+            }
+            
+            resetGame() {
+                this.gameStarted = false;
+                this.gameCompleted = false;
+                this.startTime = null;
+                this.endTime = null;
+                this.moveCount = 0;
+                this.correctMoves = 0;
+                this.stopTimer();
+                document.getElementById('timer').textContent = '00:00:00';
+            }
+            
+            captureScreenshot() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 800;
+                canvas.height = 500;
+                const ctx = canvas.getContext('2d');
+                
+                // White background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, 800, 500);
+                
+                // Draw completed puzzle
+                ctx.drawImage(this.puzzleCanvas, 50, 50);
+                
+                // Add completion info
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText('Puzzle Completed!', 500, 100);
+                
+                ctx.font = '18px Arial';
+                const totalTime = this.endTime - this.startTime;
+                const hours = Math.floor(totalTime / (1000 * 60 * 60));
+                const minutes = Math.floor((totalTime % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((totalTime % (1000 * 60)) / 1000);
+                const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                ctx.fillText(`Time: ${timeString}`, 500, 140);
+                ctx.fillText(`Difficulty: ${this.gridSize}x${this.gridSize}`, 500, 170);
+                ctx.fillText(`Session: ${this.sessionId}`, 500, 200);
+                ctx.fillText(`Accuracy: ${Math.round((this.correctMoves / this.moveCount) * 100)}%`, 500, 230);
+                
+                return canvas.toDataURL('image/png');
+            }
+        }
+        
+        // Global puzzle instance
+        let puzzle;
+        
+        function init() {
+            puzzle = new CompetitionJigsawPuzzle();
+        }
+        
+        function useDefaultImage() {
+            puzzle.createDefaultImage();
+        }
+        
+        function resetPuzzle() {
+            if (puzzle) {
+                puzzle.shufflePieces();
+                puzzle.resetGame();
+                puzzle.updateDisplay();
+            }
+        }
+        
+        function clearProgress() {
+            if (confirm('Are you sure you want to clear all progress? This cannot be undone.')) {
+                localStorage.removeItem('puzzleGameState');
+                location.reload();
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('completionModal').style.display = 'none';
+        }
+        
+        function copyResults() {
+            const resultsCode = document.getElementById('resultsCode').textContent;
+            navigator.clipboard.writeText(resultsCode).then(() => {
+                alert('Results copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = resultsCode;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Results copied to clipboard!');
+            });
+        }
+        
+        function downloadScreenshot() {
+            const screenshot = puzzle.captureScreenshot();
+            const link = document.createElement('a');
+            link.download = `puzzle-completion-${puzzle.sessionId}.png`;
+            link.href = screenshot;
+            link.click();
+        }
+        
+        function shareResults() {
+            const resultsCode = document.getElementById('resultsCode').textContent;
+            const text = `I just completed a jigsaw puzzle! 🧩\n\nResults: ${resultsCode}\n\nTry it yourself!`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Puzzle Completion',
+                    text: text,
+                    url: window.location.href
+                });
+            } else {
+                copyResults();
+                alert('Results copied! You can now paste and share them.');
+            }
+        }
+        
+        // Start the game when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
