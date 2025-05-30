@@ -267,16 +267,7 @@
         
         <div class="controls">
             <input type="file" id="imageInput" accept="image/*" onchange="loadImageFile(this.files[0])">
-            <button class="btn secondary" onclick="document.getElementById('imageInput').click()">
-                📁 Load Custom Image
-            </button>
-            <button class="btn secondary" onclick="useDefaultImage()">
-                🖼️ Use Sample Image
-            </button>
-            <select id="difficulty">
-                <option value="8" selected>Challenge (8x8)</option>
-            </select>
-            <button class="btn secondary" onclick="resetPuzzle()">
+                        <button class="btn secondary" onclick="resetPuzzle()">
                 🔄 Reset Puzzle
             </button>
             <button class="btn danger" onclick="clearProgress()">
