@@ -568,6 +568,11 @@
                     }
                 }
                 
+                console.log(`Created ${this.pieces.length} pieces total`);
+                console.log(`Expected: ${this.gridSize * this.gridSize} pieces`);
+                console.log(`First piece:`, this.pieces[0]);
+                console.log(`Last piece:`, this.pieces[this.pieces.length - 1]);
+                
                 this.shufflePieces();
                 this.updateDisplay();
                 this.render();
@@ -592,13 +597,34 @@
                     // Use exact same positioning as puzzle grid - no margins between pieces
                     piece.x = col * this.pieceWidth;
                     piece.y = row * this.pieceHeight;
+                    
+                    // Debug: check if pieces are positioned outside canvas
+                    if (piece.x + this.pieceWidth > 400 || piece.y + this.pieceHeight > 400) {
+                        console.warn(`Piece ${piece.id} positioned outside canvas: (${piece.x}, ${piece.y})`);
+                    }
                 });
                 
-                // Shuffle array
+                console.log(`Positioned pieces in ${this.gridSize}x${this.gridSize} grid, piece size: ${this.pieceWidth}x${this.pieceHeight}`);
+                console.log(`Sample positions:`, this.pieces.slice(0, 3).map(p => `(${p.x}, ${p.y})`));
+                
+                // Shuffle array to randomize piece order
                 for (let i = this.pieces.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
                     [this.pieces[i], this.pieces[j]] = [this.pieces[j], this.pieces[i]];
                 }
+                
+                // Randomize positions within the pieces canvas
+                this.pieces.forEach((piece, index) => {
+                    const maxCols = Math.floor(400 / this.pieceWidth);
+                    const maxRows = Math.floor(400 / this.pieceHeight);
+                    
+                    // Generate random position within canvas bounds
+                    const randomCol = Math.floor(Math.random() * maxCols);
+                    const randomRow = Math.floor(Math.random() * maxRows);
+                    
+                    piece.x = randomCol * this.pieceWidth;
+                    piece.y = randomRow * this.pieceHeight;
+                });
                 
                 this.render();
             }
@@ -696,17 +722,27 @@
                 }
                 
                 // Draw pieces (except the currently dragged one)
+                let placedCount = 0;
+                let unplacedCount = 0;
+                
                 this.pieces.forEach(piece => {
                     if (piece === this.draggedPiece) return; // Skip dragged piece for now
                     
                     if (piece.placed) {
+                        placedCount++;
                         this.drawPiece(this.puzzleCtx, piece, 
                             piece.currentCol * this.pieceWidth, 
                             piece.currentRow * this.pieceHeight);
                     } else {
+                        unplacedCount++;
                         this.drawPiece(this.piecesCtx, piece, piece.x, piece.y);
                     }
                 });
+                
+                // Debug: log piece counts occasionally
+                if (Math.random() < 0.1) { // 10% of renders
+                    console.log(`Rendering: ${placedCount} placed, ${unplacedCount} unplaced, total: ${this.pieces.length}`);
+                }
                 
                 // Draw the dragged piece last (on top of everything)
                 if (this.draggedPiece) {
@@ -716,6 +752,11 @@
             }
             
             drawPiece(ctx, piece, x, y) {
+                if (!this.image) {
+                    console.warn('No image loaded for drawing pieces');
+                    return;
+                }
+                
                 ctx.save();
                 
                 // Enhanced shadow and scaling for dragged pieces
