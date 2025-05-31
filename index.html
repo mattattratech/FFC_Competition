@@ -581,17 +581,14 @@
                     piece.currentCol = -1;
                 });
                 
-                // Randomly position pieces
-                const margin = 8;
-                const availableWidth = 400 - margin * 2;
-                const availableHeight = 400 - margin * 2;
-                const piecesPerRow = Math.floor(availableWidth / (this.pieceWidth + margin));
+                // Position pieces in the same grid layout as the puzzle for visual consistency
+                const margin = 2;
                 
                 this.pieces.forEach((piece, index) => {
-                    const row = Math.floor(index / piecesPerRow);
-                    const col = index % piecesPerRow;
-                    piece.x = col * (this.pieceWidth + margin) + margin;
-                    piece.y = row * (this.pieceHeight + margin) + margin;
+                    const row = Math.floor(index / this.gridSize);
+                    const col = index % this.gridSize;
+                    piece.x = margin + col * (this.pieceWidth + margin);
+                    piece.y = margin + row * (this.pieceHeight + margin);
                 });
                 
                 // Shuffle array
