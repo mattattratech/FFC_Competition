@@ -266,13 +266,8 @@
         </div>
         
         <div class="controls">
-            <button class="btn secondary" onclick="useDefaultImage()">
-                🖼️ Use Sample Image
-            </button>
-            <select id="difficulty">
-                <option value="8" selected>Challenge (8x8)</option>
-            </select>
-            <button class="btn secondary" onclick="resetPuzzle()">
+            <input type="file" id="imageInput" accept="image/*" onchange="loadImageFile(this.files[0])">
+                        <button class="btn secondary" onclick="resetPuzzle()">
                 🔄 Reset Puzzle
             </button>
             <button class="btn danger" onclick="clearProgress()">
@@ -404,7 +399,7 @@
             loadFromStorage() {
                 const saved = localStorage.getItem('puzzleGameState');
                 if (!saved) {
-                    this.createDefaultImage();
+                    this.loadDefaultImage();
                     return;
                 }
                 
@@ -439,21 +434,53 @@
                         };
                         this.image.src = gameState.imageData;
                     } else {
-                        this.createDefaultImage();
+                        this.loadDefaultImage();
                     }
                     
                 } catch (e) {
                     console.error('Failed to load saved game:', e);
-                    this.createDefaultImage();
+                    this.loadDefaultImage();
                 }
             }
             
-            createDefaultImage() {
-                // Use the uploaded football player image
+            loadDefaultImage() {
                 this.image = new Image();
                 this.image.crossOrigin = 'anonymous';
                 this.image.onload = () => this.createPuzzle();
-                this.image.src = 'smarty.jpg';
+                this.image.onerror = () => {
+                    console.error('Failed to load smarty.jpg, creating fallback image');
+                    this.createFallbackImage();
+                };
+                
+                // Try to load smarty.jpg from the same directory
+                this.image.src = './smarty.jpg';
+            }
+            
+            createFallbackImage() {
+                // Create a simple colored pattern as fallback
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 400;
+                const ctx = canvas.getContext('2d');
+                
+                // Create a colorful pattern
+                for (let i = 0; i < 8; i++) {
+                    for (let j = 0; j < 8; j++) {
+                        const hue = (i * 8 + j) * 45;
+                        ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+                        ctx.fillRect(i * 50, j * 50, 50, 50);
+                        
+                        // Add some text
+                        ctx.fillStyle = 'white';
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${i * 8 + j + 1}`, i * 50 + 25, j * 50 + 30);
+                    }
+                }
+                
+                this.image = new Image();
+                this.image.onload = () => this.createPuzzle();
+                this.image.src = canvas.toDataURL();
             }
             
             loadImage(file) {
@@ -877,8 +904,16 @@
             puzzle = new CompetitionJigsawPuzzle();
         }
         
+        function loadImageFile(file) {
+            if (puzzle && file) {
+                puzzle.loadImage(file);
+            }
+        }
+        
         function useDefaultImage() {
-            puzzle.createDefaultImage();
+            if (puzzle) {
+                puzzle.loadDefaultImage();
+            }
         }
         
         function resetPuzzle() {
