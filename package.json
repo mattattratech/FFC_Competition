@@ -1,0 +1,25 @@
+{
+  "name": "ffc-competition-puzzle",
+  "version": "1.0.0",
+  "description": "Competition Jigsaw Puzzle with Database Storage",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'No build step required'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["puzzle", "jigsaw", "competition", "database"],
+  "author": "FFC Competition",
+  "license": "MIT"
+}

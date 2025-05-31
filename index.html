@@ -327,16 +327,31 @@
             <div class="completion-time" id="finalTime"></div>
             <p>Congratulations! You've successfully completed the puzzle.</p>
             
-            <h3>Your Results:</h3>
-            <div class="results-code" id="resultsCode"></div>
-            
-            <div style="margin: 20px 0;">
-                <button class="btn success" onclick="copyResults()">📋 Copy Results</button>
-                <button class="btn secondary" onclick="downloadScreenshot()">📷 Download Screenshot</button>
-                <button class="btn" onclick="shareResults()">📤 Share Results</button>
+            <div id="userInfoForm" style="margin: 20px 0;">
+                <h3>Save Your Score!</h3>
+                <p>Enter your details to save this completion to the leaderboard:</p>
+                <div style="margin: 10px 0;">
+                    <input type="text" id="userName" placeholder="Your Name" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div style="margin: 10px 0;">
+                    <input type="email" id="userEmail" placeholder="Your Email" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <button class="btn success" onclick="saveScore()" id="saveScoreBtn">💾 Save Score</button>
+                <button class="btn secondary" onclick="skipSaving()" style="margin-left: 10px;">Skip</button>
             </div>
             
-            <button class="btn secondary" onclick="closeModal()">Close</button>
+            <div id="resultsSection" style="display: none;">
+                <h3>Your Results:</h3>
+                <div class="results-code" id="resultsCode"></div>
+                
+                <div style="margin: 20px 0;">
+                    <button class="btn success" onclick="copyResults()">📋 Copy Results</button>
+                    <button class="btn secondary" onclick="downloadScreenshot()">📷 Download Screenshot</button>
+                    <button class="btn" onclick="shareResults()">📤 Share Results</button>
+                </div>
+                
+                <button class="btn secondary" onclick="closeModal()">Close</button>
+            </div>
         </div>
     </div>
 
@@ -613,18 +628,28 @@
                     [this.pieces[i], this.pieces[j]] = [this.pieces[j], this.pieces[i]];
                 }
                 
-                // Randomize positions within the pieces canvas
+                // Create a shuffled array of all 64 positions
+                const allPositions = [];
+                for (let row = 0; row < this.gridSize; row++) {
+                    for (let col = 0; col < this.gridSize; col++) {
+                        allPositions.push({ row, col });
+                    }
+                }
+                
+                // Shuffle the positions array
+                for (let i = allPositions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [allPositions[i], allPositions[j]] = [allPositions[j], allPositions[i]];
+                }
+                
+                // Assign each piece a unique random position
                 this.pieces.forEach((piece, index) => {
-                    const maxCols = Math.floor(400 / this.pieceWidth);
-                    const maxRows = Math.floor(400 / this.pieceHeight);
-                    
-                    // Generate random position within canvas bounds
-                    const randomCol = Math.floor(Math.random() * maxCols);
-                    const randomRow = Math.floor(Math.random() * maxRows);
-                    
-                    piece.x = randomCol * this.pieceWidth;
-                    piece.y = randomRow * this.pieceHeight;
+                    const position = allPositions[index];
+                    piece.x = position.col * this.pieceWidth;
+                    piece.y = position.row * this.pieceHeight;
                 });
+                
+                console.log(`Positioned all ${this.pieces.length} pieces in randomized grid locations`);
                 
                 this.render();
             }
@@ -706,20 +731,7 @@
                     }
                 });
                 
-                // Draw hint for dragged piece's correct position
-                if (this.draggedPiece) {
-                    const correctX = this.draggedPiece.correctCol * this.pieceWidth;
-                    const correctY = this.draggedPiece.correctRow * this.pieceHeight;
-                    
-                    // Draw semi-transparent hint rectangle
-                    this.puzzleCtx.save();
-                    this.puzzleCtx.fillStyle = 'rgba(76, 175, 80, 0.3)';
-                    this.puzzleCtx.fillRect(correctX, correctY, this.pieceWidth, this.pieceHeight);
-                    this.puzzleCtx.strokeStyle = '#4CAF50';
-                    this.puzzleCtx.lineWidth = 3;
-                    this.puzzleCtx.strokeRect(correctX, correctY, this.pieceWidth, this.pieceHeight);
-                    this.puzzleCtx.restore();
-                }
+                // Hint system disabled to avoid showing correct position
                 
                 // Draw pieces (except the currently dragged one)
                 let placedCount = 0;
@@ -744,8 +756,27 @@
                     console.log(`Rendering: ${placedCount} placed, ${unplacedCount} unplaced, total: ${this.pieces.length}`);
                 }
                 
-                // Draw the dragged piece last (on top of everything)
-                if (this.draggedPiece) {
+                // Draw the dragged piece on both canvases to ensure visibility everywhere
+                if (this.draggedPiece && this.draggedPiece.globalX && this.draggedPiece.globalY) {
+                    const pieceRect = this.piecesCanvas.getBoundingClientRect();
+                    const puzzleRect = this.puzzleCanvas.getBoundingClientRect();
+                    
+                    // Always draw on pieces canvas
+                    this.drawPiece(this.piecesCtx, this.draggedPiece, 
+                        this.draggedPiece.x, this.draggedPiece.y);
+                    
+                    // If mouse is over puzzle canvas, also draw there
+                    if (this.draggedPiece.globalX >= puzzleRect.left && 
+                        this.draggedPiece.globalX <= puzzleRect.right &&
+                        this.draggedPiece.globalY >= puzzleRect.top && 
+                        this.draggedPiece.globalY <= puzzleRect.bottom) {
+                        
+                        const puzzleX = this.draggedPiece.globalX - puzzleRect.left - this.dragOffset.x;
+                        const puzzleY = this.draggedPiece.globalY - puzzleRect.top - this.dragOffset.y;
+                        this.drawPiece(this.puzzleCtx, this.draggedPiece, puzzleX, puzzleY);
+                    }
+                } else if (this.draggedPiece) {
+                    // Fallback: just draw on pieces canvas
                     this.drawPiece(this.piecesCtx, this.draggedPiece, 
                         this.draggedPiece.x, this.draggedPiece.y);
                 }
@@ -862,11 +893,15 @@
             snapBackToOriginal() {
                 if (!this.draggedPiece || !this.originalPosition) return;
                 
+                // Store references to prevent null errors during animation
+                const piece = this.draggedPiece;
+                const originalPos = this.originalPosition;
+                
                 // Animate snap-back for better user feedback
-                const startX = this.draggedPiece.x;
-                const startY = this.draggedPiece.y;
-                const targetX = this.originalPosition.x;
-                const targetY = this.originalPosition.y;
+                const startX = piece.x;
+                const startY = piece.y;
+                const targetX = originalPos.x;
+                const targetY = originalPos.y;
                 
                 const duration = 300; // Animation duration in ms
                 const startTime = Date.now();
@@ -878,9 +913,11 @@
                     // Easing function for smooth animation
                     const easeOut = 1 - Math.pow(1 - progress, 3);
                     
-                    // Interpolate position
-                    this.draggedPiece.x = startX + (targetX - startX) * easeOut;
-                    this.draggedPiece.y = startY + (targetY - startY) * easeOut;
+                    // Interpolate position - check piece still exists
+                    if (piece) {
+                        piece.x = startX + (targetX - startX) * easeOut;
+                        piece.y = startY + (targetY - startY) * easeOut;
+                    }
                     
                     this.render();
                     
@@ -888,15 +925,25 @@
                         requestAnimationFrame(animate);
                     } else {
                         // Animation complete - restore full state
-                        this.draggedPiece.placed = this.originalPosition.placed;
-                        this.draggedPiece.currentRow = this.originalPosition.currentRow;
-                        this.draggedPiece.currentCol = this.originalPosition.currentCol;
+                        if (piece && originalPos) {
+                            piece.placed = originalPos.placed;
+                            piece.currentRow = originalPos.currentRow;
+                            piece.currentCol = originalPos.currentCol;
+                        }
+                        
+                        // Clear drag state now that animation is complete
+                        this.draggedPiece = null;
+                        this.dragSource = null;
+                        this.originalPosition = null;
+                        document.body.classList.remove('dragging');
+                        
                         this.render();
                         this.updateDisplay();
+                        this.saveToStorage();
                     }
                 };
                 
-                console.log(`⬅️ Snapping piece ${this.draggedPiece.id} back to original position`);
+                console.log(`⬅️ Snapping piece ${piece.id} back to original position`);
                 requestAnimationFrame(animate);
             }
             
@@ -904,6 +951,7 @@
                 if (canvasType === 'pieces') {
                     // Handle pieces canvas - find unplaced pieces
                     const pos = this.getMousePos(this.piecesCanvas, e);
+                    console.log(`Mouse down on pieces canvas at (${pos.x}, ${pos.y})`);
                     this.draggedPiece = this.findPieceAt(pos.x, pos.y);
                     
                     if (this.draggedPiece) {
@@ -920,6 +968,12 @@
                         };
                         document.body.classList.add('dragging');
                         console.log('Started dragging piece from pieces canvas', this.draggedPiece.id);
+                    } else {
+                        console.log('No piece found at mouse position');
+                        // Debug: show all unplaced pieces and their positions
+                        const unplacedPieces = this.pieces.filter(p => !p.placed);
+                        console.log(`Unplaced pieces (${unplacedPieces.length}):`, 
+                            unplacedPieces.slice(0, 5).map(p => `Piece ${p.id}: (${p.x}, ${p.y})`));
                     }
                 } else if (canvasType === 'puzzle') {
                     // Handle puzzle canvas - find placed pieces
@@ -960,7 +1014,13 @@
             
             onMouseMove(e) {
                 if (this.draggedPiece) {
-                    // Calculate position relative to pieces canvas
+                    console.log('Mouse move with dragged piece', this.draggedPiece.id);
+                    
+                    // Store global mouse position
+                    this.draggedPiece.globalX = e.clientX;
+                    this.draggedPiece.globalY = e.clientY;
+                    
+                    // Calculate position relative to pieces canvas for rendering
                     const rect = this.piecesCanvas.getBoundingClientRect();
                     const x = e.clientX - rect.left;
                     const y = e.clientY - rect.top;
@@ -973,12 +1033,18 @@
             
             onMouseUp(e) {
                 if (this.draggedPiece) {
-                    console.log('Mouse up - checking drop');
+                    console.log('Mouse up - checking drop for piece', this.draggedPiece.id);
                     this.checkDrop(e);
+                    
+                    // Clear drag state
+                    console.log('Clearing drag state');
                     this.draggedPiece = null;
                     this.dragSource = null;
                     this.originalPosition = null;
                     document.body.classList.remove('dragging');
+                    
+                    // Force a re-render to ensure UI is updated
+                    this.render();
                 }
             }
             
@@ -1069,7 +1135,12 @@
             }
             
             checkDrop(e) {
-                if (!this.draggedPiece) return;
+                if (!this.draggedPiece) {
+                    console.log('checkDrop called but no draggedPiece');
+                    return;
+                }
+                
+                console.log('checkDrop called with piece', this.draggedPiece.id);
                 
                 // Start game if not started
                 if (!this.gameStarted) {
@@ -1092,7 +1163,8 @@
                     clientY = e.clientY;
                 }
                 
-                // Debug: console.log(`Drop position: ${clientX}, ${clientY}`);
+                console.log(`Drop position: ${clientX}, ${clientY}`);
+                console.log(`Puzzle canvas bounds:`, puzzleRect);
                 
                 if (clientX >= puzzleRect.left && clientX <= puzzleRect.right &&
                     clientY >= puzzleRect.top && clientY <= puzzleRect.bottom) {
@@ -1103,7 +1175,8 @@
                     const col = Math.floor(x / this.pieceWidth);
                     const row = Math.floor(y / this.pieceHeight);
                     
-                    // Debug: console.log(`Grid position: row ${row}, col ${col}`);
+                    console.log(`Grid position: row ${row}, col ${col} (from x=${x}, y=${y})`);
+                    console.log(`Piece size: ${this.pieceWidth} x ${this.pieceHeight}`);
                     
                     if (row >= 0 && row < this.gridSize && col >= 0 && col < this.gridSize) {
                         // Check if position is empty
@@ -1112,6 +1185,7 @@
                         
                         if (!occupiedPiece) {
                             console.log(`Placing piece ${this.draggedPiece.id} at row ${row}, col ${col}`);
+                            console.log(`Piece correct position: row ${this.draggedPiece.correctRow}, col ${this.draggedPiece.correctCol}`);
                             this.draggedPiece.placed = true;
                             this.draggedPiece.currentRow = row;
                             this.draggedPiece.currentCol = col;
@@ -1120,35 +1194,29 @@
                             if (row === this.draggedPiece.correctRow && col === this.draggedPiece.correctCol) {
                                 this.correctMoves++;
                                 console.log('✅ Correct placement!');
-                                
-                                this.render();
-                                this.updateDisplay();
-                                this.checkWin();
-                                this.saveToStorage();
                             } else {
-                                // Wrong placement - snap back to original position
-                                console.log(`❌ Wrong placement! Snapping back...`);
-                                // Add brief vibration on mobile devices
-                                if (navigator.vibrate) {
-                                    navigator.vibrate(100);
-                                }
-                                this.snapBackToOriginal();
-                                this.saveToStorage();
+                                console.log(`❌ Wrong placement but allowing it to stay`);
                             }
+                            
+                            // Allow piece to stay in any valid position
+                            this.render();
+                            this.updateDisplay();
+                            this.checkWin();
+                            this.saveToStorage();
                         } else {
                             console.log('❌ Position occupied - snapping back');
                             this.snapBackToOriginal();
-                            this.saveToStorage();
+                            return; // Exit early to prevent clearing drag state
                         }
                     } else {
                         console.log('❌ Outside grid bounds - snapping back');
                         this.snapBackToOriginal();
-                        this.saveToStorage();
+                        return; // Exit early to prevent clearing drag state
                     }
                 } else {
                     console.log('❌ Outside puzzle canvas - snapping back');
                     this.snapBackToOriginal();
-                    this.saveToStorage();
+                    return; // Exit early to prevent clearing drag state
                 }
             }
             
@@ -1276,6 +1344,39 @@
             }
         }
         
+        function autoSolve() {
+            if (!puzzle) return;
+            
+            console.log('🧩 Auto-solving puzzle for testing...');
+            
+            // Start the game if not started
+            if (!puzzle.gameStarted) {
+                puzzle.gameStarted = true;
+                puzzle.startTime = Date.now();
+                puzzle.startTimer();
+            }
+            
+            // Place all pieces in their correct positions
+            puzzle.pieces.forEach(piece => {
+                piece.placed = true;
+                piece.currentRow = piece.correctRow;
+                piece.currentCol = piece.correctCol;
+                piece.x = piece.correctCol * puzzle.pieceWidth;
+                piece.y = piece.correctRow * puzzle.pieceHeight;
+            });
+            
+            // Update move count to simulate some moves
+            puzzle.moveCount = puzzle.pieces.length;
+            puzzle.correctMoves = puzzle.pieces.length; // All moves were "correct"
+            
+            // Trigger completion
+            puzzle.render();
+            puzzle.updateDisplay();
+            puzzle.checkWin();
+            
+            console.log('✅ Puzzle auto-solved! Completion modal should appear.');
+        }
+        
         function closeModal() {
             document.getElementById('completionModal').style.display = 'none';
         }
@@ -1318,6 +1419,197 @@
                 copyResults();
                 alert('Results copied! You can now paste and share them.');
             }
+        }
+        
+        function saveScore() {
+            const userName = document.getElementById('userName').value.trim();
+            const userEmail = document.getElementById('userEmail').value.trim();
+            
+            if (!userName || !userEmail) {
+                alert('Please enter both your name and email address.');
+                return;
+            }
+            
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(userEmail)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+            
+            // Create score entry
+            const scoreEntry = {
+                sessionId: puzzle.sessionId,
+                name: userName,
+                email: userEmail,
+                completionTime: puzzle.endTime - puzzle.startTime,
+                timeString: document.getElementById('finalTime').textContent,
+                difficulty: puzzle.gridSize,
+                moveCount: puzzle.moveCount,
+                accuracy: Math.round((puzzle.correctMoves / puzzle.moveCount) * 100),
+                completedAt: new Date().toISOString(),
+                resultsCode: puzzle.generateResultsCode(puzzle.endTime - puzzle.startTime)
+            };
+            
+            // Save to localStorage database
+            saveToDatabase(scoreEntry);
+            
+            // Show success message and proceed to results
+            alert(`Score saved successfully! Thank you ${userName}!`);
+            showResultsSection();
+        }
+        
+        function skipSaving() {
+            showResultsSection();
+        }
+        
+        function showResultsSection() {
+            document.getElementById('userInfoForm').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+        }
+        
+        function saveToDatabase(scoreEntry) {
+            // Show loading state
+            const saveBtn = document.getElementById('saveScoreBtn');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '💾 Saving...';
+            saveBtn.disabled = true;
+            
+            // Send to server database
+            fetch('/api/scores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(scoreEntry)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Score saved to database:', data);
+                
+                // Also save to localStorage as backup
+                let localScores = [];
+                const existingScores = localStorage.getItem('puzzleScores');
+                if (existingScores) {
+                    try {
+                        localScores = JSON.parse(existingScores);
+                    } catch (e) {
+                        localScores = [];
+                    }
+                }
+                localScores.push(scoreEntry);
+                localStorage.setItem('puzzleScores', JSON.stringify(localScores));
+                
+                // Show success and proceed
+                alert(`Score saved successfully! Thank you ${scoreEntry.name}!`);
+                showResultsSection();
+            })
+            .catch(error => {
+                console.error('Error saving to database:', error);
+                
+                // Fallback to localStorage if server fails
+                let localScores = [];
+                const existingScores = localStorage.getItem('puzzleScores');
+                if (existingScores) {
+                    try {
+                        localScores = JSON.parse(existingScores);
+                    } catch (e) {
+                        localScores = [];
+                    }
+                }
+                localScores.push(scoreEntry);
+                localStorage.setItem('puzzleScores', JSON.stringify(localScores));
+                
+                alert(`Score saved locally! (Server unavailable - will sync when server is available)\nThank you ${scoreEntry.name}!`);
+                showResultsSection();
+            })
+            .finally(() => {
+                // Restore button state
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            });
+        }
+        
+        function getLeaderboard(limit = 10, difficulty = null) {
+            return fetch(`/api/leaderboard?limit=${limit}${difficulty ? `&difficulty=${difficulty}` : ''}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    console.error('Error fetching leaderboard:', error);
+                    // Fallback to localStorage
+                    const scores = localStorage.getItem('puzzleScores');
+                    if (scores) {
+                        try {
+                            return JSON.parse(scores).slice(0, limit);
+                        } catch (e) {
+                            return [];
+                        }
+                    }
+                    return [];
+                });
+        }
+        
+        function exportDatabase() {
+            fetch('/api/scores/export')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const dataStr = JSON.stringify(data, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                    
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(dataBlob);
+                    link.download = `puzzle-scores-export-${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+                })
+                .catch(error => {
+                    console.error('Error exporting from database:', error);
+                    // Fallback to localStorage export
+                    const scores = localStorage.getItem('puzzleScores');
+                    if (scores) {
+                        const dataStr = JSON.stringify({
+                            total: JSON.parse(scores).length,
+                            exported_at: new Date().toISOString(),
+                            source: 'localStorage_fallback',
+                            scores: JSON.parse(scores)
+                        }, null, 2);
+                        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                        
+                        const link = document.createElement('a');
+                        link.href = URL.createObjectURL(dataBlob);
+                        link.download = `puzzle-scores-local-${new Date().toISOString().split('T')[0]}.json`;
+                        link.click();
+                    } else {
+                        alert('No scores available to export');
+                    }
+                });
+        }
+        
+        function getStats() {
+            return fetch('/api/stats')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    console.error('Error fetching stats:', error);
+                    return null;
+                });
         }
         
         // Start the game when page loads

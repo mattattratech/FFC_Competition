@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competition Jigsaw Puzzle</title>
+    <!-- Same styles as original index.html but will copy them here for standalone version -->
+    <style>
+        /* All the existing CSS styles would go here */
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            width: 100%;
+        }
+        
+        /* Include all other styles from the original file */
+        .completion-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .results-display {
+            background: #f0f8ff;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <!-- Same HTML structure but modified completion modal -->
+    <div class="completion-modal" id="completionModal">
+        <div class="modal-content">
+            <h2>🎉 Puzzle Completed! 🎉</h2>
+            <div class="completion-time" id="finalTime"></div>
+            <p>Congratulations! You've successfully completed the puzzle.</p>
+            
+            <div id="userInfoForm" style="margin: 20px 0;">
+                <h3>Your Competition Results!</h3>
+                <p>Please copy your results code and submit it via email:</p>
+                
+                <div style="margin: 10px 0;">
+                    <input type="text" id="userName" placeholder="Your Name" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div style="margin: 10px 0;">
+                    <input type="email" id="userEmail" placeholder="Your Email" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                
+                <div class="results-display" id="resultsDisplay"></div>
+                
+                <p><strong>Instructions:</strong><br>
+                1. Fill in your name and email above<br>
+                2. Copy the results code<br>
+                3. Email it to: <strong>competition@yourcompany.com</strong></p>
+                
+                <button class="btn success" onclick="generateResults()">📋 Generate & Copy Results</button>
+                <button class="btn secondary" onclick="closeModal()" style="margin-left: 10px;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modified JavaScript that works without a server
+        function generateResults() {
+            const userName = document.getElementById('userName').value.trim();
+            const userEmail = document.getElementById('userEmail').value.trim();
+            
+            if (!userName || !userEmail) {
+                alert('Please enter both your name and email address.');
+                return;
+            }
+            
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(userEmail)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+            
+            // Generate results code
+            const resultsCode = `PUZZLE-RESULT:${puzzle.sessionId}:NAME:${userName}:EMAIL:${userEmail}:TIME:${Math.floor((puzzle.endTime - puzzle.startTime) / 1000)}s:GRID:${puzzle.gridSize}x${puzzle.gridSize}:MOVES:${puzzle.moveCount}:ACCURACY:${Math.round((puzzle.correctMoves / puzzle.moveCount) * 100)}%:COMPLETED:${new Date().toISOString()}`;
+            
+            // Display results
+            document.getElementById('resultsDisplay').textContent = resultsCode;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(resultsCode).then(() => {
+                alert(`Results copied to clipboard!\n\nPlease email this code to: competition@yourcompany.com\n\nThank you ${userName}!`);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = resultsCode;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert(`Results copied to clipboard!\n\nPlease email this code to: competition@yourcompany.com\n\nThank you ${userName}!`);
+            });
+        }
+        
+        // All other JavaScript functions remain the same...
+    </script>
+</body>
+</html>
