@@ -549,6 +549,8 @@
                 this.pieceWidth = 400 / this.gridSize;
                 this.pieceHeight = 400 / this.gridSize;
                 
+                console.log(`Creating ${this.gridSize}x${this.gridSize} puzzle with ${this.pieceWidth}x${this.pieceHeight}px pieces`);
+                
                 // Create pieces
                 for (let row = 0; row < this.gridSize; row++) {
                     for (let col = 0; col < this.gridSize; col++) {
@@ -574,6 +576,8 @@
             shufflePieces() {
                 if (!this.pieces.length) return;
                 
+                console.log(`Shuffling ${this.pieces.length} pieces in ${this.gridSize}x${this.gridSize} grid`);
+                
                 // Reset all pieces
                 this.pieces.forEach(piece => {
                     piece.placed = false;
@@ -581,14 +585,13 @@
                     piece.currentCol = -1;
                 });
                 
-                // Position pieces in the same grid layout as the puzzle for visual consistency
-                const margin = 2;
-                
+                // Position pieces in exact 8x8 grid layout to match puzzle canvas
                 this.pieces.forEach((piece, index) => {
                     const row = Math.floor(index / this.gridSize);
                     const col = index % this.gridSize;
-                    piece.x = margin + col * (this.pieceWidth + margin);
-                    piece.y = margin + row * (this.pieceHeight + margin);
+                    // Use exact same positioning as puzzle grid - no margins between pieces
+                    piece.x = col * this.pieceWidth;
+                    piece.y = row * this.pieceHeight;
                 });
                 
                 // Shuffle array
@@ -659,21 +662,23 @@
                 this.puzzleCtx.clearRect(0, 0, 400, 400);
                 this.piecesCtx.clearRect(0, 0, 400, 400);
                 
-                // Draw grid on puzzle canvas
-                this.puzzleCtx.strokeStyle = '#ddd';
-                this.puzzleCtx.lineWidth = 1;
-                for (let i = 0; i <= this.gridSize; i++) {
-                    const pos = i * this.pieceWidth;
-                    this.puzzleCtx.beginPath();
-                    this.puzzleCtx.moveTo(pos, 0);
-                    this.puzzleCtx.lineTo(pos, 400);
-                    this.puzzleCtx.stroke();
-                    
-                    this.puzzleCtx.beginPath();
-                    this.puzzleCtx.moveTo(0, pos);
-                    this.puzzleCtx.lineTo(400, pos);
-                    this.puzzleCtx.stroke();
-                }
+                // Draw grid on both canvases for visual consistency
+                [this.puzzleCtx, this.piecesCtx].forEach(ctx => {
+                    ctx.strokeStyle = '#ddd';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i <= this.gridSize; i++) {
+                        const pos = i * this.pieceWidth;
+                        ctx.beginPath();
+                        ctx.moveTo(pos, 0);
+                        ctx.lineTo(pos, 400);
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(0, pos);
+                        ctx.lineTo(400, pos);
+                        ctx.stroke();
+                    }
+                });
                 
                 // Draw hint for dragged piece's correct position
                 if (this.draggedPiece) {
