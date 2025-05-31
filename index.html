@@ -158,6 +158,15 @@
             cursor: grabbing;
         }
         
+        .highlight-target {
+            animation: highlightPulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes highlightPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+        
         body.dragging {
             cursor: grabbing !important;
         }
@@ -667,6 +676,21 @@
                     this.puzzleCtx.moveTo(0, pos);
                     this.puzzleCtx.lineTo(400, pos);
                     this.puzzleCtx.stroke();
+                }
+                
+                // Draw hint for dragged piece's correct position
+                if (this.draggedPiece) {
+                    const correctX = this.draggedPiece.correctCol * this.pieceWidth;
+                    const correctY = this.draggedPiece.correctRow * this.pieceHeight;
+                    
+                    // Draw semi-transparent hint rectangle
+                    this.puzzleCtx.save();
+                    this.puzzleCtx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+                    this.puzzleCtx.fillRect(correctX, correctY, this.pieceWidth, this.pieceHeight);
+                    this.puzzleCtx.strokeStyle = '#4CAF50';
+                    this.puzzleCtx.lineWidth = 3;
+                    this.puzzleCtx.strokeRect(correctX, correctY, this.pieceWidth, this.pieceHeight);
+                    this.puzzleCtx.restore();
                 }
                 
                 // Draw pieces
