@@ -75,6 +75,11 @@
             display: none;
         }
         
+        label[for="imageInput"] {
+            display: inline-block;
+            cursor: pointer;
+        }
+        
         .btn {
             background: #4CAF50;
             color: white;
@@ -266,8 +271,15 @@
         </div>
         
         <div class="controls">
+            <button class="btn secondary" onclick="useDefaultImage()">
+                🖼️ Use Sample Image
+            </button>
             <input type="file" id="imageInput" accept="image/*" onchange="loadImageFile(this.files[0])">
-                        <button class="btn secondary" onclick="resetPuzzle()">
+            <label for="imageInput" class="btn secondary">📁 Upload Image</label>
+            <select id="difficulty">
+                <option value="8" selected>Challenge (8x8)</option>
+            </select>
+            <button class="btn secondary" onclick="resetPuzzle()">
                 🔄 Reset Puzzle
             </button>
             <button class="btn danger" onclick="clearProgress()">
@@ -419,7 +431,7 @@
                     document.getElementById('difficulty').value = this.gridSize;
                     
                     // Restore image and pieces
-                    if (gameState.imageData) {
+                    if (gameState.imageData && gameState.pieces && gameState.pieces.length > 0) {
                         this.image = new Image();
                         this.image.onload = () => {
                             this.pieceWidth = 400 / this.gridSize;
@@ -431,6 +443,10 @@
                             if (this.gameStarted && !this.gameCompleted) {
                                 this.startTimer();
                             }
+                        };
+                        this.image.onerror = () => {
+                            console.error('Failed to restore saved image, loading default');
+                            this.loadDefaultImage();
                         };
                         this.image.src = gameState.imageData;
                     } else {
@@ -445,15 +461,17 @@
             
             loadDefaultImage() {
                 this.image = new Image();
-                this.image.crossOrigin = 'anonymous';
-                this.image.onload = () => this.createPuzzle();
+                this.image.onload = () => {
+                    console.log('Successfully loaded smarty.jpg');
+                    this.createPuzzle();
+                };
                 this.image.onerror = () => {
                     console.error('Failed to load smarty.jpg, creating fallback image');
                     this.createFallbackImage();
                 };
                 
                 // Try to load smarty.jpg from the same directory
-                this.image.src = './smarty.jpg';
+                this.image.src = 'smarty.jpg';
             }
             
             createFallbackImage() {
@@ -912,6 +930,8 @@
         
         function useDefaultImage() {
             if (puzzle) {
+                // Clear any existing game state to force loading fresh
+                puzzle.resetGame();
                 puzzle.loadDefaultImage();
             }
         }
@@ -927,7 +947,9 @@
         function clearProgress() {
             if (confirm('Are you sure you want to clear all progress? This cannot be undone.')) {
                 localStorage.removeItem('puzzleGameState');
-                location.reload();
+                if (puzzle) {
+                    puzzle.loadDefaultImage();
+                }
             }
         }
         
