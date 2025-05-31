@@ -906,8 +906,7 @@
                     clientY = e.clientY;
                 }
                 
-                console.log(`Drop position: ${clientX}, ${clientY}`);
-                console.log(`Puzzle canvas bounds:`, puzzleRect);
+                // Debug: console.log(`Drop position: ${clientX}, ${clientY}`);
                 
                 if (clientX >= puzzleRect.left && clientX <= puzzleRect.right &&
                     clientY >= puzzleRect.top && clientY <= puzzleRect.bottom) {
@@ -918,7 +917,7 @@
                     const col = Math.floor(x / this.pieceWidth);
                     const row = Math.floor(y / this.pieceHeight);
                     
-                    console.log(`Grid position: row ${row}, col ${col}`);
+                    // Debug: console.log(`Grid position: row ${row}, col ${col}`);
                     
                     if (row >= 0 && row < this.gridSize && col >= 0 && col < this.gridSize) {
                         // Check if position is empty
@@ -926,7 +925,7 @@
                             p.placed && p.currentRow === row && p.currentCol === col);
                         
                         if (!occupiedPiece) {
-                            console.log(`Placing piece at row ${row}, col ${col}`);
+                            console.log(`Placing piece ${this.draggedPiece.id} at row ${row}, col ${col}`);
                             this.draggedPiece.placed = true;
                             this.draggedPiece.currentRow = row;
                             this.draggedPiece.currentCol = col;
@@ -934,9 +933,7 @@
                             // Check if correct placement
                             if (row === this.draggedPiece.correctRow && col === this.draggedPiece.correctCol) {
                                 this.correctMoves++;
-                                console.log('Correct placement!');
-                            } else {
-                                console.log(`Wrong placement! Should be row ${this.draggedPiece.correctRow}, col ${this.draggedPiece.correctCol}`);
+                                console.log('✅ Correct placement!');
                             }
                             
                             this.render();
@@ -944,13 +941,10 @@
                             this.checkWin();
                             this.saveToStorage();
                         } else {
-                            console.log('Position occupied');
+                            console.log('❌ Position occupied');
                         }
-                    } else {
-                        console.log('Outside grid bounds');
                     }
                 } else {
-                    console.log('Outside puzzle canvas - piece stays in pieces area');
                     // If piece was dragged from puzzle grid but not placed back on grid,
                     // just leave it in the pieces canvas area where it is
                 }
