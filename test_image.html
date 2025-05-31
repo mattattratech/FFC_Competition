@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Load Test</title>
+</head>
+<body>
+    <h2>Testing smarty.jpg Loading</h2>
+    <img id="testImg" style="max-width: 300px; border: 2px solid #000;">
+    <p id="status">Loading...</p>
+    
+    <script>
+        const img = document.getElementById('testImg');
+        const status = document.getElementById('status');
+        
+        img.onload = function() {
+            status.textContent = `✅ Image loaded successfully! Size: ${this.naturalWidth}x${this.naturalHeight}`;
+            status.style.color = 'green';
+        };
+        
+        img.onerror = function() {
+            status.textContent = '❌ Failed to load smarty.jpg';
+            status.style.color = 'red';
+        };
+        
+        img.src = 'smarty.jpg';
+    </script>
+</body>
+</html>

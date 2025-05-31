@@ -151,6 +151,15 @@
         canvas {
             display: block;
             border-radius: 8px;
+            cursor: default;
+        }
+        
+        body.dragging {
+            cursor: grabbing !important;
+        }
+        
+        body.dragging * {
+            cursor: grabbing !important;
         }
         
         .info {
@@ -366,15 +375,19 @@
                     if (this.image) this.createPuzzle();
                 });
                 
-                // Mouse events
+                // Mouse events on pieces canvas
                 this.piecesCanvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-                this.piecesCanvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-                this.piecesCanvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
                 
-                // Touch events
+                // Global mouse events for dragging
+                document.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                document.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                
+                // Touch events on pieces canvas
                 this.piecesCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e));
-                this.piecesCanvas.addEventListener('touchmove', (e) => this.onTouchMove(e));
-                this.piecesCanvas.addEventListener('touchend', (e) => this.onTouchEnd(e));
+                
+                // Global touch events for dragging
+                document.addEventListener('touchmove', (e) => this.onTouchMove(e));
+                document.addEventListener('touchend', (e) => this.onTouchEnd(e));
                 
                 // Auto-save every 5 seconds
                 setInterval(() => this.saveToStorage(), 5000);
@@ -726,22 +739,30 @@
                 if (this.draggedPiece) {
                     this.dragOffset.x = pos.x - this.draggedPiece.x;
                     this.dragOffset.y = pos.y - this.draggedPiece.y;
+                    document.body.classList.add('dragging');
+                    console.log('Started dragging piece', this.draggedPiece.id);
                 }
             }
             
             onMouseMove(e) {
                 if (this.draggedPiece) {
-                    const pos = this.getMousePos(this.piecesCanvas, e);
-                    this.draggedPiece.x = pos.x - this.dragOffset.x;
-                    this.draggedPiece.y = pos.y - this.dragOffset.y;
+                    // Calculate position relative to pieces canvas
+                    const rect = this.piecesCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    this.draggedPiece.x = x - this.dragOffset.x;
+                    this.draggedPiece.y = y - this.dragOffset.y;
                     this.render();
                 }
             }
             
             onMouseUp(e) {
                 if (this.draggedPiece) {
+                    console.log('Mouse up - checking drop');
                     this.checkDrop(e);
                     this.draggedPiece = null;
+                    document.body.classList.remove('dragging');
                 }
             }
             
@@ -753,15 +774,21 @@
                 if (this.draggedPiece) {
                     this.dragOffset.x = pos.x - this.draggedPiece.x;
                     this.dragOffset.y = pos.y - this.draggedPiece.y;
+                    document.body.classList.add('dragging');
+                    console.log('Started touch dragging piece', this.draggedPiece.id);
                 }
             }
             
             onTouchMove(e) {
                 e.preventDefault();
                 if (this.draggedPiece) {
-                    const pos = this.getTouchPos(this.piecesCanvas, e);
-                    this.draggedPiece.x = pos.x - this.dragOffset.x;
-                    this.draggedPiece.y = pos.y - this.dragOffset.y;
+                    // Calculate position relative to pieces canvas
+                    const rect = this.piecesCanvas.getBoundingClientRect();
+                    const x = e.touches[0].clientX - rect.left;
+                    const y = e.touches[0].clientY - rect.top;
+                    
+                    this.draggedPiece.x = x - this.dragOffset.x;
+                    this.draggedPiece.y = y - this.dragOffset.y;
                     this.render();
                 }
             }
@@ -769,12 +796,16 @@
             onTouchEnd(e) {
                 e.preventDefault();
                 if (this.draggedPiece) {
+                    console.log('Touch end - checking drop');
                     this.checkDrop(e);
                     this.draggedPiece = null;
+                    document.body.classList.remove('dragging');
                 }
             }
             
             checkDrop(e) {
+                if (!this.draggedPiece) return;
+                
                 // Start game if not started
                 if (!this.gameStarted) {
                     this.gameStarted = true;
@@ -796,6 +827,9 @@
                     clientY = e.clientY;
                 }
                 
+                console.log(`Drop position: ${clientX}, ${clientY}`);
+                console.log(`Puzzle canvas bounds:`, puzzleRect);
+                
                 if (clientX >= puzzleRect.left && clientX <= puzzleRect.right &&
                     clientY >= puzzleRect.top && clientY <= puzzleRect.bottom) {
                     
@@ -805,12 +839,15 @@
                     const col = Math.floor(x / this.pieceWidth);
                     const row = Math.floor(y / this.pieceHeight);
                     
+                    console.log(`Grid position: row ${row}, col ${col}`);
+                    
                     if (row >= 0 && row < this.gridSize && col >= 0 && col < this.gridSize) {
                         // Check if position is empty
                         const occupiedPiece = this.pieces.find(p => 
                             p.placed && p.currentRow === row && p.currentCol === col);
                         
                         if (!occupiedPiece) {
+                            console.log(`Placing piece at row ${row}, col ${col}`);
                             this.draggedPiece.placed = true;
                             this.draggedPiece.currentRow = row;
                             this.draggedPiece.currentCol = col;
@@ -818,14 +855,23 @@
                             // Check if correct placement
                             if (row === this.draggedPiece.correctRow && col === this.draggedPiece.correctCol) {
                                 this.correctMoves++;
+                                console.log('Correct placement!');
+                            } else {
+                                console.log(`Wrong placement! Should be row ${this.draggedPiece.correctRow}, col ${this.draggedPiece.correctCol}`);
                             }
                             
                             this.render();
                             this.updateDisplay();
                             this.checkWin();
                             this.saveToStorage();
+                        } else {
+                            console.log('Position occupied');
                         }
+                    } else {
+                        console.log('Outside grid bounds');
                     }
+                } else {
+                    console.log('Outside puzzle canvas');
                 }
             }
             
