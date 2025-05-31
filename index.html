@@ -693,8 +693,10 @@
                     this.puzzleCtx.restore();
                 }
                 
-                // Draw pieces
+                // Draw pieces (except the currently dragged one)
                 this.pieces.forEach(piece => {
+                    if (piece === this.draggedPiece) return; // Skip dragged piece for now
+                    
                     if (piece.placed) {
                         this.drawPiece(this.puzzleCtx, piece, 
                             piece.currentCol * this.pieceWidth, 
@@ -703,35 +705,74 @@
                         this.drawPiece(this.piecesCtx, piece, piece.x, piece.y);
                     }
                 });
+                
+                // Draw the dragged piece last (on top of everything)
+                if (this.draggedPiece) {
+                    this.drawPiece(this.piecesCtx, this.draggedPiece, 
+                        this.draggedPiece.x, this.draggedPiece.y);
+                }
             }
             
             drawPiece(ctx, piece, x, y) {
                 ctx.save();
                 
-                // Draw piece shadow
-                ctx.shadowColor = 'rgba(0,0,0,0.3)';
-                ctx.shadowBlur = 5;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
+                // Enhanced shadow and scaling for dragged pieces
+                const isDragged = piece === this.draggedPiece;
                 
-                // Draw the piece image
-                ctx.drawImage(
-                    this.image,
-                    piece.correctCol * this.pieceWidth, piece.correctRow * this.pieceHeight,
-                    this.pieceWidth, this.pieceHeight,
-                    x, y,
-                    this.pieceWidth, this.pieceHeight
-                );
-                
-                // Draw border
-                ctx.shadowColor = 'transparent';
-                ctx.strokeStyle = piece.placed && 
-                    piece.currentRow === piece.correctRow && 
-                    piece.currentCol === piece.correctCol ? '#4CAF50' : '#333';
-                ctx.lineWidth = piece.placed && 
-                    piece.currentRow === piece.correctRow && 
-                    piece.currentCol === piece.correctCol ? 3 : 2;
-                ctx.strokeRect(x, y, this.pieceWidth, this.pieceHeight);
+                if (isDragged) {
+                    // Stronger shadow for dragged piece
+                    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowOffsetX = 5;
+                    ctx.shadowOffsetY = 5;
+                    
+                    // Slight scale up for dragged piece
+                    const scale = 1.05;
+                    const scaledWidth = this.pieceWidth * scale;
+                    const scaledHeight = this.pieceHeight * scale;
+                    const offsetX = (scaledWidth - this.pieceWidth) / 2;
+                    const offsetY = (scaledHeight - this.pieceHeight) / 2;
+                    
+                    // Draw scaled piece
+                    ctx.drawImage(
+                        this.image,
+                        piece.correctCol * this.pieceWidth, piece.correctRow * this.pieceHeight,
+                        this.pieceWidth, this.pieceHeight,
+                        x - offsetX, y - offsetY,
+                        scaledWidth, scaledHeight
+                    );
+                    
+                    // Draw border for dragged piece
+                    ctx.shadowColor = 'transparent';
+                    ctx.strokeStyle = '#2196F3'; // Blue border for dragged pieces
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x - offsetX, y - offsetY, scaledWidth, scaledHeight);
+                } else {
+                    // Normal shadow for non-dragged pieces
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                    ctx.shadowBlur = 5;
+                    ctx.shadowOffsetX = 2;
+                    ctx.shadowOffsetY = 2;
+                    
+                    // Draw the piece image normally
+                    ctx.drawImage(
+                        this.image,
+                        piece.correctCol * this.pieceWidth, piece.correctRow * this.pieceHeight,
+                        this.pieceWidth, this.pieceHeight,
+                        x, y,
+                        this.pieceWidth, this.pieceHeight
+                    );
+                    
+                    // Draw border
+                    ctx.shadowColor = 'transparent';
+                    ctx.strokeStyle = piece.placed && 
+                        piece.currentRow === piece.correctRow && 
+                        piece.currentCol === piece.correctCol ? '#4CAF50' : '#333';
+                    ctx.lineWidth = piece.placed && 
+                        piece.currentRow === piece.correctRow && 
+                        piece.currentCol === piece.correctCol ? 3 : 2;
+                    ctx.strokeRect(x, y, this.pieceWidth, this.pieceHeight);
+                }
                 
                 ctx.restore();
             }
