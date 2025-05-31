@@ -348,6 +348,7 @@
                 this.draggedPiece = null;
                 this.dragOffset = { x: 0, y: 0 };
                 this.dragSource = null;
+                this.originalPosition = null;
                 
                 // Timer and progress tracking
                 this.startTime = null;
@@ -750,6 +751,47 @@
                 return null;
             }
             
+            snapBackToOriginal() {
+                if (!this.draggedPiece || !this.originalPosition) return;
+                
+                // Animate snap-back for better user feedback
+                const startX = this.draggedPiece.x;
+                const startY = this.draggedPiece.y;
+                const targetX = this.originalPosition.x;
+                const targetY = this.originalPosition.y;
+                
+                const duration = 300; // Animation duration in ms
+                const startTime = Date.now();
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function for smooth animation
+                    const easeOut = 1 - Math.pow(1 - progress, 3);
+                    
+                    // Interpolate position
+                    this.draggedPiece.x = startX + (targetX - startX) * easeOut;
+                    this.draggedPiece.y = startY + (targetY - startY) * easeOut;
+                    
+                    this.render();
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Animation complete - restore full state
+                        this.draggedPiece.placed = this.originalPosition.placed;
+                        this.draggedPiece.currentRow = this.originalPosition.currentRow;
+                        this.draggedPiece.currentCol = this.originalPosition.currentCol;
+                        this.render();
+                        this.updateDisplay();
+                    }
+                };
+                
+                console.log(`⬅️ Snapping piece ${this.draggedPiece.id} back to original position`);
+                requestAnimationFrame(animate);
+            }
+            
             onMouseDown(e, canvasType) {
                 if (canvasType === 'pieces') {
                     // Handle pieces canvas - find unplaced pieces
@@ -760,6 +802,14 @@
                         this.dragOffset.x = pos.x - this.draggedPiece.x;
                         this.dragOffset.y = pos.y - this.draggedPiece.y;
                         this.dragSource = 'pieces';
+                        // Store original position for snap-back
+                        this.originalPosition = {
+                            x: this.draggedPiece.x,
+                            y: this.draggedPiece.y,
+                            placed: false,
+                            currentRow: -1,
+                            currentCol: -1
+                        };
                         document.body.classList.add('dragging');
                         console.log('Started dragging piece from pieces canvas', this.draggedPiece.id);
                     }
@@ -769,6 +819,15 @@
                     this.draggedPiece = this.findPieceOnGrid(pos.x, pos.y);
                     
                     if (this.draggedPiece) {
+                        // Store original grid position for snap-back
+                        this.originalPosition = {
+                            x: this.draggedPiece.currentCol * this.pieceWidth,
+                            y: this.draggedPiece.currentRow * this.pieceHeight,
+                            placed: true,
+                            currentRow: this.draggedPiece.currentRow,
+                            currentCol: this.draggedPiece.currentCol
+                        };
+                        
                         // Remove from grid and move to pieces canvas coordinates
                         this.draggedPiece.placed = false;
                         this.draggedPiece.currentRow = -1;
@@ -810,6 +869,7 @@
                     this.checkDrop(e);
                     this.draggedPiece = null;
                     this.dragSource = null;
+                    this.originalPosition = null;
                     document.body.classList.remove('dragging');
                 }
             }
@@ -826,6 +886,14 @@
                         this.dragOffset.x = pos.x - this.draggedPiece.x;
                         this.dragOffset.y = pos.y - this.draggedPiece.y;
                         this.dragSource = 'pieces';
+                        // Store original position for snap-back
+                        this.originalPosition = {
+                            x: this.draggedPiece.x,
+                            y: this.draggedPiece.y,
+                            placed: false,
+                            currentRow: -1,
+                            currentCol: -1
+                        };
                         document.body.classList.add('dragging');
                         console.log('Started touch dragging piece from pieces canvas', this.draggedPiece.id);
                     }
@@ -835,6 +903,15 @@
                     this.draggedPiece = this.findPieceOnGrid(pos.x, pos.y);
                     
                     if (this.draggedPiece) {
+                        // Store original grid position for snap-back
+                        this.originalPosition = {
+                            x: this.draggedPiece.currentCol * this.pieceWidth,
+                            y: this.draggedPiece.currentRow * this.pieceHeight,
+                            placed: true,
+                            currentRow: this.draggedPiece.currentRow,
+                            currentCol: this.draggedPiece.currentCol
+                        };
+                        
                         // Remove from grid and move to pieces canvas coordinates
                         this.draggedPiece.placed = false;
                         this.draggedPiece.currentRow = -1;
@@ -878,6 +955,7 @@
                     this.checkDrop(e);
                     this.draggedPiece = null;
                     this.dragSource = null;
+                    this.originalPosition = null;
                     document.body.classList.remove('dragging');
                 }
             }
@@ -934,19 +1012,35 @@
                             if (row === this.draggedPiece.correctRow && col === this.draggedPiece.correctCol) {
                                 this.correctMoves++;
                                 console.log('✅ Correct placement!');
+                                
+                                this.render();
+                                this.updateDisplay();
+                                this.checkWin();
+                                this.saveToStorage();
+                            } else {
+                                // Wrong placement - snap back to original position
+                                console.log(`❌ Wrong placement! Snapping back...`);
+                                // Add brief vibration on mobile devices
+                                if (navigator.vibrate) {
+                                    navigator.vibrate(100);
+                                }
+                                this.snapBackToOriginal();
+                                this.saveToStorage();
                             }
-                            
-                            this.render();
-                            this.updateDisplay();
-                            this.checkWin();
-                            this.saveToStorage();
                         } else {
-                            console.log('❌ Position occupied');
+                            console.log('❌ Position occupied - snapping back');
+                            this.snapBackToOriginal();
+                            this.saveToStorage();
                         }
+                    } else {
+                        console.log('❌ Outside grid bounds - snapping back');
+                        this.snapBackToOriginal();
+                        this.saveToStorage();
                     }
                 } else {
-                    // If piece was dragged from puzzle grid but not placed back on grid,
-                    // just leave it in the pieces canvas area where it is
+                    console.log('❌ Outside puzzle canvas - snapping back');
+                    this.snapBackToOriginal();
+                    this.saveToStorage();
                 }
             }
             
