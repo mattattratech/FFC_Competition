@@ -392,10 +392,8 @@
             }
             
             initEventListeners() {
-                document.getElementById('difficulty').addEventListener('change', (e) => {
-                    this.gridSize = parseInt(e.target.value);
-                    if (this.image) this.createPuzzle();
-                });
+                // Remove difficulty selector event listener since we removed the element
+                // this.gridSize is fixed at 8 for competition
                 
                 // Mouse events on both canvases
                 this.piecesCanvas.addEventListener('mousedown', (e) => this.onMouseDown(e, 'pieces'));
@@ -464,8 +462,7 @@
                     this.moveCount = gameState.moveCount || 0;
                     this.correctMoves = gameState.correctMoves || 0;
                     
-                    // Update difficulty selector
-                    document.getElementById('difficulty').value = this.gridSize;
+                    // Difficulty is fixed at 8 for competition
                     
                     // Restore image and pieces
                     if (gameState.imageData && gameState.pieces && gameState.pieces.length > 0) {
