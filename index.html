@@ -738,8 +738,9 @@
                         const x = Math.max(0, Math.min(this.draggedPiece.globalX - puzzleRect.left, 400));
                         const y = Math.max(0, Math.min(this.draggedPiece.globalY - puzzleRect.top, 400));
                         
-                        let col = Math.round(x / this.pieceWidth);
-                        let row = Math.round(y / this.pieceHeight);
+                        // Use floor with offset for consistent positioning with drop logic
+                        let col = Math.floor((x + this.pieceWidth * 0.5) / this.pieceWidth);
+                        let row = Math.floor((y + this.pieceHeight * 0.5) / this.pieceHeight);
                         
                         // Ensure within bounds
                         col = Math.max(0, Math.min(col, this.gridSize - 1));
@@ -1201,8 +1202,9 @@
                     const x = Math.max(0, Math.min(clientX - puzzleRect.left, 400));
                     const y = Math.max(0, Math.min(clientY - puzzleRect.top, 400));
                     
-                    let col = Math.round(x / this.pieceWidth);
-                    let row = Math.round(y / this.pieceHeight);
+                    // Use floor with offset for more predictable positioning
+                    let col = Math.floor((x + this.pieceWidth * 0.5) / this.pieceWidth);
+                    let row = Math.floor((y + this.pieceHeight * 0.5) / this.pieceHeight);
                     
                     // Ensure within grid bounds
                     col = Math.max(0, Math.min(col, this.gridSize - 1));
