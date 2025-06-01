@@ -789,31 +789,31 @@
             }
             
             renderStaticContent() {
-                // Only re-render static content if pieces have changed positions
-                if (!this.staticContentDirty) return;
-                
-                // Clear both canvases
-                this.puzzleCtx.clearRect(0, 0, 400, 400);
-                this.piecesCtx.clearRect(0, 0, 400, 400);
-                
-                // Draw grid
-                this.drawGrid(this.puzzleCtx);
-                this.drawGrid(this.piecesCtx);
-                
-                // Draw all static pieces (not being dragged)
-                this.pieces.forEach(piece => {
-                    if (piece === this.draggedPiece) return;
+                // Always clear both canvases when dragging to prevent multiple instances
+                if (this.draggedPiece || this.staticContentDirty) {
+                    // Clear both canvases
+                    this.puzzleCtx.clearRect(0, 0, 400, 400);
+                    this.piecesCtx.clearRect(0, 0, 400, 400);
                     
-                    if (piece.placed) {
-                        this.drawPiece(this.puzzleCtx, piece, 
-                            piece.currentCol * this.pieceWidth, 
-                            piece.currentRow * this.pieceHeight);
-                    } else {
-                        this.drawPiece(this.piecesCtx, piece, piece.x, piece.y);
-                    }
-                });
-                
-                this.staticContentDirty = false;
+                    // Draw grid
+                    this.drawGrid(this.puzzleCtx);
+                    this.drawGrid(this.piecesCtx);
+                    
+                    // Draw all static pieces (not being dragged)
+                    this.pieces.forEach(piece => {
+                        if (piece === this.draggedPiece) return;
+                        
+                        if (piece.placed) {
+                            this.drawPiece(this.puzzleCtx, piece, 
+                                piece.currentCol * this.pieceWidth, 
+                                piece.currentRow * this.pieceHeight);
+                        } else {
+                            this.drawPiece(this.piecesCtx, piece, piece.x, piece.y);
+                        }
+                    });
+                    
+                    this.staticContentDirty = false;
+                }
             }
             
             renderDraggedPiece() {
@@ -834,9 +834,37 @@
                 // Calculate and draw new highlight
                 this.drawDropZoneHighlight();
                 
-                // Draw dragged piece (no clearing needed - just draw over)
-                this.drawPiece(this.piecesCtx, this.draggedPiece, 
-                    this.draggedPiece.x, this.draggedPiece.y);
+                // Only draw dragged piece ONCE - determine which canvas based on mouse position
+                this.drawDraggedPieceOnCorrectCanvas();
+            }
+            
+            drawDraggedPieceOnCorrectCanvas() {
+                if (!this.draggedPiece || !this.draggedPiece.globalX || !this.draggedPiece.globalY) {
+                    // Fallback to pieces canvas
+                    this.drawPiece(this.piecesCtx, this.draggedPiece, 
+                        this.draggedPiece.x, this.draggedPiece.y);
+                    return;
+                }
+                
+                const puzzleRect = this.puzzleCanvas.getBoundingClientRect();
+                const piecesRect = this.piecesCanvas.getBoundingClientRect();
+                
+                // Determine which canvas the mouse is primarily over
+                const overPuzzle = this.draggedPiece.globalX >= puzzleRect.left && 
+                                   this.draggedPiece.globalX <= puzzleRect.right &&
+                                   this.draggedPiece.globalY >= puzzleRect.top && 
+                                   this.draggedPiece.globalY <= puzzleRect.bottom;
+                
+                if (overPuzzle) {
+                    // Draw on puzzle canvas with mouse-relative positioning
+                    const puzzleX = this.draggedPiece.globalX - puzzleRect.left - this.dragOffset.x;
+                    const puzzleY = this.draggedPiece.globalY - puzzleRect.top - this.dragOffset.y;
+                    this.drawPiece(this.puzzleCtx, this.draggedPiece, puzzleX, puzzleY);
+                } else {
+                    // Draw on pieces canvas with calculated positioning
+                    this.drawPiece(this.piecesCtx, this.draggedPiece, 
+                        this.draggedPiece.x, this.draggedPiece.y);
+                }
             }
             
             clearHighlight() {
