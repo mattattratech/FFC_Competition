@@ -293,6 +293,14 @@
         </div>
         
         <div class="controls">
+            <button class="btn secondary" onclick="useDefaultImage()">
+                🖼️ Use Sample Image
+            </button>
+            <input type="file" id="imageInput" accept="image/*" onchange="loadImageFile(this.files[0])">
+            <label for="imageInput" class="btn secondary">📁 Upload Image</label>
+            <select id="difficulty">
+                <option value="8" selected>Challenge (8x8)</option>
+            </select>
             <button class="btn secondary" onclick="resetPuzzle()">
                 🔄 Reset Puzzle
             </button>
@@ -723,49 +731,7 @@
                     }
                 });
                 
-                // Show drop zone highlights when dragging
-                if (this.draggedPiece && this.draggedPiece.globalX && this.draggedPiece.globalY) {
-                    const puzzleRect = this.puzzleCanvas.getBoundingClientRect();
-                    
-                    // Check if mouse is over puzzle canvas
-                    if (this.draggedPiece.globalX >= puzzleRect.left && 
-                        this.draggedPiece.globalX <= puzzleRect.right &&
-                        this.draggedPiece.globalY >= puzzleRect.top && 
-                        this.draggedPiece.globalY <= puzzleRect.bottom) {
-                        
-                        // Calculate which grid cell mouse is over
-                        const x = this.draggedPiece.globalX - puzzleRect.left;
-                        const y = this.draggedPiece.globalY - puzzleRect.top;
-                        let col = Math.round(x / this.pieceWidth);
-                        let row = Math.round(y / this.pieceHeight);
-                        
-                        // Ensure within bounds
-                        col = Math.max(0, Math.min(col, this.gridSize - 1));
-                        row = Math.max(0, Math.min(row, this.gridSize - 1));
-                        
-                        // Check if position is available
-                        const occupiedPiece = this.pieces.find(p => 
-                            p.placed && p.currentRow === row && p.currentCol === col && p !== this.draggedPiece);
-                        
-                        // Draw drop zone highlight
-                        this.puzzleCtx.save();
-                        if (occupiedPiece) {
-                            // Occupied - show orange/yellow highlight (swap preview)
-                            this.puzzleCtx.fillStyle = 'rgba(255, 152, 0, 0.4)';
-                            this.puzzleCtx.strokeStyle = '#FF9800';
-                        } else {
-                            // Available - show green highlight
-                            this.puzzleCtx.fillStyle = 'rgba(76, 175, 80, 0.3)';
-                            this.puzzleCtx.strokeStyle = '#4CAF50';
-                        }
-                        this.puzzleCtx.lineWidth = 3;
-                        const highlightX = col * this.pieceWidth;
-                        const highlightY = row * this.pieceHeight;
-                        this.puzzleCtx.fillRect(highlightX, highlightY, this.pieceWidth, this.pieceHeight);
-                        this.puzzleCtx.strokeRect(highlightX, highlightY, this.pieceWidth, this.pieceHeight);
-                        this.puzzleCtx.restore();
-                    }
-                }
+                // Hint system disabled to avoid showing correct position
                 
                 // Draw pieces (except the currently dragged one)
                 let placedCount = 0;
@@ -1048,6 +1014,8 @@
             
             onMouseMove(e) {
                 if (this.draggedPiece) {
+                    console.log('Mouse move with dragged piece', this.draggedPiece.id);
+                    
                     // Store global mouse position
                     this.draggedPiece.globalX = e.clientX;
                     this.draggedPiece.globalY = e.clientY;
@@ -1065,9 +1033,11 @@
             
             onMouseUp(e) {
                 if (this.draggedPiece) {
+                    console.log('Mouse up - checking drop for piece', this.draggedPiece.id);
                     this.checkDrop(e);
                     
                     // Clear drag state
+                    console.log('Clearing drag state');
                     this.draggedPiece = null;
                     this.dragSource = null;
                     this.originalPosition = null;
@@ -1166,8 +1136,11 @@
             
             checkDrop(e) {
                 if (!this.draggedPiece) {
+                    console.log('checkDrop called but no draggedPiece');
                     return;
                 }
+                
+                console.log('checkDrop called with piece', this.draggedPiece.id);
                 
                 // Start game if not started
                 if (!this.gameStarted) {
@@ -1190,109 +1163,61 @@
                     clientY = e.clientY;
                 }
                 
-                // Check if dropped on puzzle canvas (with larger tolerance zone)
-                const tolerance = 20; // pixels outside canvas still count
-                if (clientX >= puzzleRect.left - tolerance && clientX <= puzzleRect.right + tolerance &&
-                    clientY >= puzzleRect.top - tolerance && clientY <= puzzleRect.bottom + tolerance) {
+                console.log(`Drop position: ${clientX}, ${clientY}`);
+                console.log(`Puzzle canvas bounds:`, puzzleRect);
+                
+                if (clientX >= puzzleRect.left && clientX <= puzzleRect.right &&
+                    clientY >= puzzleRect.top && clientY <= puzzleRect.bottom) {
                     
-                    // Calculate grid position with improved snapping
+                    // Calculate grid position
                     const x = clientX - puzzleRect.left;
                     const y = clientY - puzzleRect.top;
+                    const col = Math.floor(x / this.pieceWidth);
+                    const row = Math.floor(y / this.pieceHeight);
                     
-                    // Smart snapping - find the nearest grid position
-                    let col = Math.round(x / this.pieceWidth);
-                    let row = Math.round(y / this.pieceHeight);
+                    console.log(`Grid position: row ${row}, col ${col} (from x=${x}, y=${y})`);
+                    console.log(`Piece size: ${this.pieceWidth} x ${this.pieceHeight}`);
                     
-                    // Ensure within bounds
-                    col = Math.max(0, Math.min(col, this.gridSize - 1));
-                    row = Math.max(0, Math.min(row, this.gridSize - 1));
-                    
-                    // Check if position is empty or if it's the same piece being moved
-                    const occupiedPiece = this.pieces.find(p => 
-                        p.placed && p.currentRow === row && p.currentCol === col && p !== this.draggedPiece);
-                    
-                    if (!occupiedPiece) {
-                        // Place the piece
-                        this.draggedPiece.placed = true;
-                        this.draggedPiece.currentRow = row;
-                        this.draggedPiece.currentCol = col;
+                    if (row >= 0 && row < this.gridSize && col >= 0 && col < this.gridSize) {
+                        // Check if position is empty
+                        const occupiedPiece = this.pieces.find(p => 
+                            p.placed && p.currentRow === row && p.currentCol === col);
                         
-                        // Check if correct placement
-                        if (row === this.draggedPiece.correctRow && col === this.draggedPiece.correctCol) {
-                            this.correctMoves++;
+                        if (!occupiedPiece) {
+                            console.log(`Placing piece ${this.draggedPiece.id} at row ${row}, col ${col}`);
+                            console.log(`Piece correct position: row ${this.draggedPiece.correctRow}, col ${this.draggedPiece.correctCol}`);
+                            this.draggedPiece.placed = true;
+                            this.draggedPiece.currentRow = row;
+                            this.draggedPiece.currentCol = col;
+                            
+                            // Check if correct placement
+                            if (row === this.draggedPiece.correctRow && col === this.draggedPiece.correctCol) {
+                                this.correctMoves++;
+                                console.log('✅ Correct placement!');
+                            } else {
+                                console.log(`❌ Wrong placement but allowing it to stay`);
+                            }
+                            
+                            // Allow piece to stay in any valid position
+                            this.render();
+                            this.updateDisplay();
+                            this.checkWin();
+                            this.saveToStorage();
+                        } else {
+                            console.log('❌ Position occupied - snapping back');
+                            this.snapBackToOriginal();
+                            return; // Exit early to prevent clearing drag state
                         }
-                        
-                        // Smooth placement animation
-                        this.animateToPosition(this.draggedPiece, col * this.pieceWidth, row * this.pieceHeight);
-                        
-                        this.render();
-                        this.updateDisplay();
-                        this.checkWin();
-                        this.saveToStorage();
                     } else {
-                        // Position occupied - try to swap pieces
-                        this.swapPieces(this.draggedPiece, occupiedPiece);
+                        console.log('❌ Outside grid bounds - snapping back');
+                        this.snapBackToOriginal();
+                        return; // Exit early to prevent clearing drag state
                     }
                 } else {
+                    console.log('❌ Outside puzzle canvas - snapping back');
                     this.snapBackToOriginal();
                     return; // Exit early to prevent clearing drag state
                 }
-            }
-            
-            swapPieces(piece1, piece2) {
-                
-                // Store piece2's current position
-                const tempRow = piece2.currentRow;
-                const tempCol = piece2.currentCol;
-                const tempPlaced = piece2.placed;
-                
-                // Move piece2 to piece1's original position
-                if (this.originalPosition && this.originalPosition.placed) {
-                    piece2.currentRow = this.originalPosition.currentRow;
-                    piece2.currentCol = this.originalPosition.currentCol;
-                    piece2.placed = this.originalPosition.placed;
-                } else {
-                    // Move piece2 back to pieces canvas
-                    piece2.placed = false;
-                    piece2.currentRow = -1;
-                    piece2.currentCol = -1;
-                    piece2.x = this.originalPosition ? this.originalPosition.x : 0;
-                    piece2.y = this.originalPosition ? this.originalPosition.y : 0;
-                }
-                
-                // Move piece1 to piece2's position
-                piece1.currentRow = tempRow;
-                piece1.currentCol = tempCol;
-                piece1.placed = tempPlaced;
-                
-                this.render();
-                this.updateDisplay();
-                this.saveToStorage();
-            }
-            
-            animateToPosition(piece, targetX, targetY) {
-                // Smooth animation to final position
-                const startX = piece.x || 0;
-                const startY = piece.y || 0;
-                const duration = 200; // ms
-                const startTime = Date.now();
-                
-                const animate = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    const easeOut = 1 - Math.pow(1 - progress, 3);
-                    
-                    piece.x = startX + (targetX - startX) * easeOut;
-                    piece.y = startY + (targetY - startY) * easeOut;
-                    
-                    this.render();
-                    
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    }
-                };
-                
-                requestAnimationFrame(animate);
             }
             
             checkWin() {
