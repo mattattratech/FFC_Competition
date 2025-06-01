@@ -706,7 +706,7 @@
                 this.puzzleCtx.clearRect(0, 0, 400, 400);
                 this.piecesCtx.clearRect(0, 0, 400, 400);
                 
-                // Draw enhanced grid on both canvases for better targeting
+                // Draw grid lines only (removed center dots to prevent flickering)
                 [this.puzzleCtx, this.piecesCtx].forEach(ctx => {
                     ctx.strokeStyle = '#ddd';
                     ctx.lineWidth = 1;
@@ -721,18 +721,6 @@
                         ctx.moveTo(0, pos);
                         ctx.lineTo(400, pos);
                         ctx.stroke();
-                    }
-                    
-                    // Add subtle center dots for precise targeting
-                    ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
-                    for (let row = 0; row < this.gridSize; row++) {
-                        for (let col = 0; col < this.gridSize; col++) {
-                            const centerX = col * this.pieceWidth + this.pieceWidth / 2;
-                            const centerY = row * this.pieceHeight + this.pieceHeight / 2;
-                            ctx.beginPath();
-                            ctx.arc(centerX, centerY, 2, 0, 2 * Math.PI);
-                            ctx.fill();
-                        }
                     }
                 });
                 
@@ -757,7 +745,7 @@
                         // Check if we're clearly within cell boundaries
                         const cellX = x % this.pieceWidth;
                         const cellY = y % this.pieceHeight;
-                        const margin = 5;
+                        const margin = 3;
                         
                         // Only show highlight if clearly within a cell
                         if (cellX < margin || cellX > this.pieceWidth - margin ||
@@ -1232,7 +1220,7 @@
                     // Only proceed if we're clearly within the cell boundaries (not on edges)
                     const cellX = x % this.pieceWidth;
                     const cellY = y % this.pieceHeight;
-                    const margin = 5; // 5px margin from edges
+                    const margin = 3; // 3px margin from edges - less strict
                     
                     if (cellX < margin || cellX > this.pieceWidth - margin ||
                         cellY < margin || cellY > this.pieceHeight - margin) {
