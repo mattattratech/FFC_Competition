@@ -497,17 +497,21 @@
             }
             
             loadDefaultImage() {
+                console.log('🖼️ Loading default image...');
                 this.image = new Image();
                 this.image.onload = () => {
-                    console.log('Successfully loaded smarty.jpg');
+                    console.log('✅ Successfully loaded smarty.jpg');
+                    console.log('Image dimensions:', this.image.width, 'x', this.image.height);
                     this.createPuzzle();
                 };
-                this.image.onerror = () => {
-                    console.error('Failed to load smarty.jpg, creating fallback image');
+                this.image.onerror = (e) => {
+                    console.error('❌ Failed to load smarty.jpg:', e);
+                    console.log('🎨 Creating fallback image...');
                     this.createFallbackImage();
                 };
                 
                 // Try to load smarty.jpg from the same directory
+                console.log('📂 Attempting to load: smarty.jpg');
                 this.image.src = 'smarty.jpg';
             }
             
@@ -701,11 +705,20 @@
             }
             
             render() {
+                console.log('🎨 Rendering puzzle...', {
+                    gridSize: this.gridSize,
+                    pieceWidth: this.pieceWidth,
+                    pieceHeight: this.pieceHeight,
+                    totalPieces: this.pieces.length,
+                    hasImage: !!this.image
+                });
+                
                 // Clear both canvases
                 this.puzzleCtx.clearRect(0, 0, 400, 400);
                 this.piecesCtx.clearRect(0, 0, 400, 400);
                 
                 // Draw grid on both canvases for visual consistency
+                console.log('📏 Drawing grid lines...');
                 [this.puzzleCtx, this.piecesCtx].forEach(ctx => {
                     ctx.strokeStyle = '#ddd';
                     ctx.lineWidth = 1;
