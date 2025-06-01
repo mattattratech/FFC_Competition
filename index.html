@@ -33,26 +33,17 @@
         
         .tratech-logo {
             margin-bottom: 15px;
-            font-family: 'Arial Black', Arial, sans-serif;
-            font-weight: 900;
-            letter-spacing: 2px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         
-        .tratech-text {
-            background: linear-gradient(45deg, #1e3c72, #2a5298);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 24px;
-            margin-right: 8px;
-        }
-        
-        .consulting-text {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 18px;
+        .logo-image {
+            max-height: 80px;
+            max-width: 300px;
+            height: auto;
+            width: auto;
+            object-fit: contain;
         }
         
         h1 {
@@ -326,8 +317,7 @@
     <div class="container">
         <div class="header-branding">
             <div class="tratech-logo">
-                <span class="tratech-text">TRATECH</span>
-                <span class="consulting-text">CONSULTING</span>
+                <img src="logo-colour-transparent.webp" alt="Tratech Consulting" class="logo-image">
             </div>
             <h1>⚽ Farnborough FC Season Ticket Competition - Day 7</h1>
             <p class="competition-subtitle">Powered by Tratech Consulting</p>
