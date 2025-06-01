@@ -248,9 +248,12 @@
             border-radius: 8px;
             padding: 15px;
             font-family: 'Courier New', monospace;
-            word-break: break-all;
+            white-space: pre-line;
+            word-wrap: break-word;
             margin: 20px 0;
             font-size: 14px;
+            text-align: left;
+            line-height: 1.4;
         }
         
         .progress-bar {
@@ -1529,8 +1532,18 @@
                 const accuracy = this.moveCount > 0 ? Math.round((this.correctMoves / this.moveCount) * 100) : 0;
                 const difficulty = this.gridSize;
                 const timeInSeconds = Math.floor(totalTime / 1000);
+                const completedDate = new Date().toISOString();
                 
-                return `PUZZLE-RESULT:${this.sessionId}:TIME:${timeInSeconds}s:GRID:${difficulty}x${difficulty}:MOVES:${this.moveCount}:ACCURACY:${accuracy}%:COMPLETED:${new Date().toISOString()}`;
+                // Format each metric on its own line for better readability
+                return `🏆 COMPETITION RESULTS 🏆
+Session ID: ${this.sessionId}
+Completion Time: ${timeInSeconds} seconds
+Grid Size: ${difficulty}x${difficulty}
+Total Moves: ${this.moveCount}
+Accuracy: ${accuracy}%
+Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split('.')[0]}
+
+🎯 Result Code: PUZZLE-${this.sessionId}-${timeInSeconds}s-${accuracy}%`;
             }
             
             resetGame() {
