@@ -217,7 +217,7 @@ app.get('/api/leaderboard', (req, res) => {
     console.log('Query params - limit:', limit, 'difficulty:', difficulty);
     
     let sql = `SELECT 
-        id, session_id, name, completion_time, time_string, 
+        id, session_id, name, email, completion_time, time_string, 
         difficulty, move_count, accuracy, completed_at
     FROM scores`;
     
