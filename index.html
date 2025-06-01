@@ -380,6 +380,7 @@
                 
                 // Rendering optimization
                 this.renderPending = false;
+                this.staticContentDirty = true;
                 
                 this.initializeSession();
                 this.initEventListeners();
@@ -604,6 +605,9 @@
                     piece.currentCol = -1;
                 });
                 
+                // Mark static content as dirty
+                this.staticContentDirty = true;
+                
                 // Position pieces in exact 8x8 grid layout to match puzzle canvas
                 this.pieces.forEach((piece, index) => {
                     const row = Math.floor(index / this.gridSize);
@@ -719,117 +723,162 @@
             }
             
             doRender() {
+                // Only clear and redraw when necessary
+                this.renderStaticContent();
+                this.renderDraggedPiece();
+            }
+            
+            renderStaticContent() {
+                // Only re-render static content if pieces have changed positions
+                if (!this.staticContentDirty) return;
+                
                 // Clear both canvases
                 this.puzzleCtx.clearRect(0, 0, 400, 400);
                 this.piecesCtx.clearRect(0, 0, 400, 400);
                 
-                // Draw grid - optimized to reduce flickering
+                // Draw grid
                 this.drawGrid(this.puzzleCtx);
                 this.drawGrid(this.piecesCtx);
                 
-                // Show drop zone highlight when dragging
-                if (this.draggedPiece && this.draggedPiece.globalX && this.draggedPiece.globalY) {
-                    const puzzleRect = this.puzzleCanvas.getBoundingClientRect();
-                    
-                    // Check if mouse is over puzzle canvas
-                    if (this.draggedPiece.globalX >= puzzleRect.left - 30 && 
-                        this.draggedPiece.globalX <= puzzleRect.right + 30 &&
-                        this.draggedPiece.globalY >= puzzleRect.top - 30 && 
-                        this.draggedPiece.globalY <= puzzleRect.bottom + 30) {
-                        
-                        // Calculate target grid position
-                        const x = Math.max(0, Math.min(this.draggedPiece.globalX - puzzleRect.left, 400));
-                        const y = Math.max(0, Math.min(this.draggedPiece.globalY - puzzleRect.top, 400));
-                        
-                        // Use same precise logic as drop for consistency
-                        let col = Math.floor(x / this.pieceWidth);
-                        let row = Math.floor(y / this.pieceHeight);
-                        
-                        // Check if we're clearly within cell boundaries
-                        const cellX = x % this.pieceWidth;
-                        const cellY = y % this.pieceHeight;
-                        const margin = 3;
-                        
-                        // Only show highlight if clearly within a cell
-                        if (cellX < margin || cellX > this.pieceWidth - margin ||
-                            cellY < margin || cellY > this.pieceHeight - margin) {
-                            return; // Don't show highlight near edges
-                        }
-                        
-                        // Ensure within bounds
-                        col = Math.max(0, Math.min(col, this.gridSize - 1));
-                        row = Math.max(0, Math.min(row, this.gridSize - 1));
-                        
-                        // Check if position is occupied
-                        const occupiedPiece = this.pieces.find(p => 
-                            p.placed && p.currentRow === row && p.currentCol === col && p !== this.draggedPiece);
-                        
-                        // Draw drop zone highlight
-                        this.puzzleCtx.save();
-                        if (occupiedPiece) {
-                            // Occupied - show swap preview
-                            this.puzzleCtx.fillStyle = 'rgba(255, 152, 0, 0.4)';
-                            this.puzzleCtx.strokeStyle = '#FF9800';
-                        } else {
-                            // Available - show green highlight  
-                            this.puzzleCtx.fillStyle = 'rgba(76, 175, 80, 0.3)';
-                            this.puzzleCtx.strokeStyle = '#4CAF50';
-                        }
-                        this.puzzleCtx.lineWidth = 3;
-                        const highlightX = col * this.pieceWidth;
-                        const highlightY = row * this.pieceHeight;
-                        this.puzzleCtx.fillRect(highlightX, highlightY, this.pieceWidth, this.pieceHeight);
-                        this.puzzleCtx.strokeRect(highlightX, highlightY, this.pieceWidth, this.pieceHeight);
-                        this.puzzleCtx.restore();
-                    }
-                }
-                
-                // Draw pieces (except the currently dragged one)
-                let placedCount = 0;
-                let unplacedCount = 0;
-                
+                // Draw all static pieces (not being dragged)
                 this.pieces.forEach(piece => {
-                    if (piece === this.draggedPiece) return; // Skip dragged piece for now
+                    if (piece === this.draggedPiece) return;
                     
                     if (piece.placed) {
-                        placedCount++;
                         this.drawPiece(this.puzzleCtx, piece, 
                             piece.currentCol * this.pieceWidth, 
                             piece.currentRow * this.pieceHeight);
                     } else {
-                        unplacedCount++;
                         this.drawPiece(this.piecesCtx, piece, piece.x, piece.y);
                     }
                 });
                 
-                // Debug: log piece counts occasionally
-                if (Math.random() < 0.1) { // 10% of renders
-                    console.log(`Rendering: ${placedCount} placed, ${unplacedCount} unplaced, total: ${this.pieces.length}`);
+                this.staticContentDirty = false;
+            }
+            
+            renderDraggedPiece() {
+                if (!this.draggedPiece) {
+                    // Clear any existing highlight when not dragging
+                    if (this.lastHighlight) {
+                        this.clearHighlight();
+                        this.lastHighlight = null;
+                    }
+                    return;
                 }
                 
-                // Draw the dragged piece on both canvases to ensure visibility everywhere
-                if (this.draggedPiece && this.draggedPiece.globalX && this.draggedPiece.globalY) {
-                    const pieceRect = this.piecesCanvas.getBoundingClientRect();
-                    const puzzleRect = this.puzzleCanvas.getBoundingClientRect();
-                    
-                    // Always draw on pieces canvas
-                    this.drawPiece(this.piecesCtx, this.draggedPiece, 
-                        this.draggedPiece.x, this.draggedPiece.y);
-                    
-                    // If mouse is over puzzle canvas, also draw there
-                    if (this.draggedPiece.globalX >= puzzleRect.left && 
-                        this.draggedPiece.globalX <= puzzleRect.right &&
-                        this.draggedPiece.globalY >= puzzleRect.top && 
-                        this.draggedPiece.globalY <= puzzleRect.bottom) {
-                        
-                        const puzzleX = this.draggedPiece.globalX - puzzleRect.left - this.dragOffset.x;
-                        const puzzleY = this.draggedPiece.globalY - puzzleRect.top - this.dragOffset.y;
-                        this.drawPiece(this.puzzleCtx, this.draggedPiece, puzzleX, puzzleY);
+                // Clear previous highlight first
+                if (this.lastHighlight) {
+                    this.clearHighlight();
+                }
+                
+                // Calculate and draw new highlight
+                this.drawDropZoneHighlight();
+                
+                // Draw dragged piece (no clearing needed - just draw over)
+                this.drawPiece(this.piecesCtx, this.draggedPiece, 
+                    this.draggedPiece.x, this.draggedPiece.y);
+            }
+            
+            clearHighlight() {
+                if (!this.lastHighlight) return;
+                
+                // Only clear the specific highlight area, then redraw static content there
+                const { x, y, width, height } = this.lastHighlight;
+                this.puzzleCtx.clearRect(x - 2, y - 2, width + 4, height + 4);
+                
+                // Redraw grid in cleared area
+                this.puzzleCtx.save();
+                this.puzzleCtx.strokeStyle = '#ddd';
+                this.puzzleCtx.lineWidth = 1;
+                this.puzzleCtx.beginPath();
+                
+                // Draw grid lines in cleared area
+                for (let i = 0; i <= this.gridSize; i++) {
+                    const pos = i * this.pieceWidth;
+                    if (pos >= x - 2 && pos <= x + width + 2) {
+                        this.puzzleCtx.moveTo(pos, Math.max(0, y - 2));
+                        this.puzzleCtx.lineTo(pos, Math.min(400, y + height + 2));
                     }
-                } else if (this.draggedPiece) {
-                    // Fallback: just draw on pieces canvas
-                    this.drawPiece(this.piecesCtx, this.draggedPiece, 
-                        this.draggedPiece.x, this.draggedPiece.y);
+                }
+                for (let i = 0; i <= this.gridSize; i++) {
+                    const pos = i * this.pieceHeight;
+                    if (pos >= y - 2 && pos <= y + height + 2) {
+                        this.puzzleCtx.moveTo(Math.max(0, x - 2), pos);
+                        this.puzzleCtx.lineTo(Math.min(400, x + width + 2), pos);
+                    }
+                }
+                this.puzzleCtx.stroke();
+                this.puzzleCtx.restore();
+                
+                // Redraw any pieces in cleared area
+                this.pieces.forEach(piece => {
+                    if (piece.placed && piece !== this.draggedPiece) {
+                        const pieceX = piece.currentCol * this.pieceWidth;
+                        const pieceY = piece.currentRow * this.pieceHeight;
+                        
+                        // Check if piece overlaps with cleared area
+                        if (pieceX < x + width && pieceX + this.pieceWidth > x &&
+                            pieceY < y + height && pieceY + this.pieceHeight > y) {
+                            this.drawPiece(this.puzzleCtx, piece, pieceX, pieceY);
+                        }
+                    }
+                });
+            }
+            
+            drawDropZoneHighlight() {
+                if (!this.draggedPiece || !this.draggedPiece.globalX || !this.draggedPiece.globalY) return;
+                
+                const puzzleRect = this.puzzleCanvas.getBoundingClientRect();
+                
+                if (this.draggedPiece.globalX >= puzzleRect.left - 30 && 
+                    this.draggedPiece.globalX <= puzzleRect.right + 30 &&
+                    this.draggedPiece.globalY >= puzzleRect.top - 30 && 
+                    this.draggedPiece.globalY <= puzzleRect.bottom + 30) {
+                    
+                    const x = Math.max(0, Math.min(this.draggedPiece.globalX - puzzleRect.left, 400));
+                    const y = Math.max(0, Math.min(this.draggedPiece.globalY - puzzleRect.top, 400));
+                    
+                    let col = Math.floor(x / this.pieceWidth);
+                    let row = Math.floor(y / this.pieceHeight);
+                    
+                    const cellX = x % this.pieceWidth;
+                    const cellY = y % this.pieceHeight;
+                    const margin = 3;
+                    
+                    if (!(cellX < margin || cellX > this.pieceWidth - margin ||
+                          cellY < margin || cellY > this.pieceHeight - margin)) {
+                        
+                        col = Math.max(0, Math.min(col, this.gridSize - 1));
+                        row = Math.max(0, Math.min(row, this.gridSize - 1));
+                        
+                        const occupiedPiece = this.pieces.find(p => 
+                            p.placed && p.currentRow === row && p.currentCol === col && p !== this.draggedPiece);
+                        
+                        const highlightX = col * this.pieceWidth;
+                        const highlightY = row * this.pieceHeight;
+                        
+                        // Store highlight info for clearing
+                        this.lastHighlight = {
+                            x: highlightX,
+                            y: highlightY,
+                            width: this.pieceWidth,
+                            height: this.pieceHeight
+                        };
+                        
+                        // Draw highlight
+                        this.puzzleCtx.save();
+                        if (occupiedPiece) {
+                            this.puzzleCtx.fillStyle = 'rgba(255, 152, 0, 0.4)';
+                            this.puzzleCtx.strokeStyle = '#FF9800';
+                        } else {
+                            this.puzzleCtx.fillStyle = 'rgba(76, 175, 80, 0.3)';
+                            this.puzzleCtx.strokeStyle = '#4CAF50';
+                        }
+                        this.puzzleCtx.lineWidth = 3;
+                        this.puzzleCtx.fillRect(highlightX, highlightY, this.pieceWidth, this.pieceHeight);
+                        this.puzzleCtx.strokeRect(highlightX, highlightY, this.pieceWidth, this.pieceHeight);
+                        this.puzzleCtx.restore();
+                    }
                 }
             }
             
@@ -1289,6 +1338,9 @@
                 if (row === piece.correctRow && col === piece.correctCol) {
                     this.correctMoves++;
                 }
+                
+                // Mark static content as dirty
+                this.staticContentDirty = true;
                 
                 // Smooth animation to final position
                 this.animateToPosition(piece, col * this.pieceWidth, row * this.pieceHeight);
