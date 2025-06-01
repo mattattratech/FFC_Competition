@@ -12,39 +12,49 @@ app.use(express.json());
 app.use(express.static('.')); // Serve static files from current directory
 
 // Initialize SQLite database
-const db = new sqlite3.Database('./puzzle_scores.db', (err) => {
-    if (err) {
-        console.error('Error opening database:', err.message);
-    } else {
-        console.log('Connected to SQLite database');
-        // Create scores table if it doesn't exist
-        db.run(`CREATE TABLE IF NOT EXISTS scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            completion_time INTEGER NOT NULL,
-            time_string TEXT NOT NULL,
-            difficulty INTEGER NOT NULL,
-            move_count INTEGER NOT NULL,
-            accuracy INTEGER NOT NULL,
-            completed_at TEXT NOT NULL,
-            results_code TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`, (err) => {
-            if (err) {
-                console.error('Error creating table:', err.message);
-            } else {
-                console.log('Scores table ready');
-            }
-        });
-    }
-});
+let db;
+try {
+    db = new sqlite3.Database('./puzzle_scores.db', (err) => {
+        if (err) {
+            console.error('Error opening database:', err.message);
+            console.log('Database functionality will be disabled');
+        } else {
+            console.log('Connected to SQLite database');
+            // Create scores table if it doesn't exist
+            db.run(`CREATE TABLE IF NOT EXISTS scores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                completion_time INTEGER NOT NULL,
+                time_string TEXT NOT NULL,
+                difficulty INTEGER NOT NULL,
+                move_count INTEGER NOT NULL,
+                accuracy INTEGER NOT NULL,
+                completed_at TEXT NOT NULL,
+                results_code TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )`, (err) => {
+                if (err) {
+                    console.error('Error creating table:', err.message);
+                } else {
+                    console.log('Scores table ready');
+                }
+            });
+        }
+    });
+} catch (error) {
+    console.error('Failed to initialize database:', error.message);
+    console.log('Running without database support');
+}
 
 // API Routes
 
 // Save a new score
 app.post('/api/scores', (req, res) => {
+    if (!db) {
+        return res.status(503).json({ error: 'Database not available' });
+    }
     const {
         sessionId,
         name,
