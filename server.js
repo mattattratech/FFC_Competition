@@ -13,15 +13,36 @@ app.use(express.static('.')); // Serve static files from current directory
 
 // Initialize SQLite database
 let db;
+const fs = require('fs');
+
+console.log('🗄️ Initializing database...');
+console.log('Current working directory:', process.cwd());
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('Platform:', process.platform);
+
+// Check if we can write to the current directory
 try {
-    db = new sqlite3.Database('./puzzle_scores.db', (err) => {
+    fs.writeFileSync('./test-write.tmp', 'test');
+    fs.unlinkSync('./test-write.tmp');
+    console.log('✅ File system write access confirmed');
+} catch (err) {
+    console.error('❌ Cannot write to file system:', err.message);
+}
+
+try {
+    // Use absolute path for Railway
+    const dbPath = process.env.NODE_ENV === 'production' ? '/tmp/puzzle_scores.db' : './puzzle_scores.db';
+    console.log('📁 Database path:', dbPath);
+    
+    db = new sqlite3.Database(dbPath, (err) => {
         if (err) {
-            console.error('Error opening database:', err.message);
-            console.log('Database functionality will be disabled');
+            console.error('❌ Error opening database:', err.message);
+            console.log('🚨 Database functionality will be disabled');
         } else {
-            console.log('Connected to SQLite database');
+            console.log('✅ Connected to SQLite database at:', dbPath);
+            
             // Create scores table if it doesn't exist
-            db.run(`CREATE TABLE IF NOT EXISTS scores (
+            const createTableSQL = `CREATE TABLE IF NOT EXISTS scores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 session_id TEXT NOT NULL,
                 name TEXT NOT NULL,
@@ -34,18 +55,42 @@ try {
                 completed_at TEXT NOT NULL,
                 results_code TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`, (err) => {
+            )`;
+            
+            console.log('🔨 Creating scores table...');
+            db.run(createTableSQL, (err) => {
                 if (err) {
-                    console.error('Error creating table:', err.message);
+                    console.error('❌ Error creating table:', err.message);
+                    console.error('SQL:', createTableSQL);
                 } else {
-                    console.log('Scores table ready');
+                    console.log('✅ Scores table ready');
+                    
+                    // Test insert to verify everything works
+                    db.run(`INSERT INTO scores (
+                        session_id, name, email, completion_time, time_string,
+                        difficulty, move_count, accuracy, completed_at, results_code
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+                        'TEST-SESSION-123', 'Test User', 'test@example.com', 
+                        60000, '01:00:00', 8, 100, 85, new Date().toISOString(),
+                        'TEST-RESULT-CODE'
+                    ], function(err) {
+                        if (err) {
+                            console.error('❌ Test insert failed:', err.message);
+                        } else {
+                            console.log('✅ Test record inserted with ID:', this.lastID);
+                            // Clean up test record
+                            db.run('DELETE FROM scores WHERE session_id = ?', ['TEST-SESSION-123'], (err) => {
+                                if (!err) console.log('🧹 Test record cleaned up');
+                            });
+                        }
+                    });
                 }
             });
         }
     });
 } catch (error) {
-    console.error('Failed to initialize database:', error.message);
-    console.log('Running without database support');
+    console.error('❌ Failed to initialize database:', error.message);
+    console.log('🚨 Running without database support');
 }
 
 // API Routes
