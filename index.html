@@ -378,6 +378,9 @@
                 this.moveCount = 0;
                 this.correctMoves = 0;
                 
+                // Rendering optimization
+                this.renderPending = false;
+                
                 this.initializeSession();
                 this.initEventListeners();
                 this.loadFromStorage();
@@ -705,27 +708,24 @@
             }
             
             render() {
+                // Use requestAnimationFrame to prevent excessive redraws
+                if (this.renderPending) return;
+                this.renderPending = true;
+                
+                requestAnimationFrame(() => {
+                    this.doRender();
+                    this.renderPending = false;
+                });
+            }
+            
+            doRender() {
                 // Clear both canvases
                 this.puzzleCtx.clearRect(0, 0, 400, 400);
                 this.piecesCtx.clearRect(0, 0, 400, 400);
                 
-                // Draw grid lines only (removed center dots to prevent flickering)
-                [this.puzzleCtx, this.piecesCtx].forEach(ctx => {
-                    ctx.strokeStyle = '#ddd';
-                    ctx.lineWidth = 1;
-                    for (let i = 0; i <= this.gridSize; i++) {
-                        const pos = i * this.pieceWidth;
-                        ctx.beginPath();
-                        ctx.moveTo(pos, 0);
-                        ctx.lineTo(pos, 400);
-                        ctx.stroke();
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(0, pos);
-                        ctx.lineTo(400, pos);
-                        ctx.stroke();
-                    }
-                });
+                // Draw grid - optimized to reduce flickering
+                this.drawGrid(this.puzzleCtx);
+                this.drawGrid(this.piecesCtx);
                 
                 // Show drop zone highlight when dragging
                 if (this.draggedPiece && this.draggedPiece.globalX && this.draggedPiece.globalY) {
@@ -1063,6 +1063,30 @@
                 }
             }
             
+            drawGrid(ctx) {
+                ctx.save();
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                
+                // Draw all vertical lines in one path
+                for (let i = 0; i <= this.gridSize; i++) {
+                    const pos = i * this.pieceWidth;
+                    ctx.moveTo(pos, 0);
+                    ctx.lineTo(pos, 400);
+                }
+                
+                // Draw all horizontal lines in one path
+                for (let i = 0; i <= this.gridSize; i++) {
+                    const pos = i * this.pieceHeight;
+                    ctx.moveTo(0, pos);
+                    ctx.lineTo(400, pos);
+                }
+                
+                ctx.stroke();
+                ctx.restore();
+            }
+            
             onMouseMove(e) {
                 if (this.draggedPiece) {
                     // Store global mouse position for drop zone highlighting
@@ -1076,6 +1100,8 @@
                     
                     this.draggedPiece.x = x - this.dragOffset.x;
                     this.draggedPiece.y = y - this.dragOffset.y;
+                    
+                    // Throttle rendering during drag to reduce flickering
                     this.render();
                 }
             }
