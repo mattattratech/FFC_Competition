@@ -50,11 +50,49 @@ try {
 
 // API Routes
 
+// Database health check
+app.get('/api/health', (req, res) => {
+    console.log('🏥 Health check requested');
+    
+    if (!db) {
+        return res.json({ 
+            status: 'error', 
+            database: 'not_available',
+            message: 'Database connection failed'
+        });
+    }
+    
+    // Test database with a simple count query
+    db.get('SELECT COUNT(*) as count FROM scores', [], (err, row) => {
+        if (err) {
+            console.error('❌ Health check failed:', err.message);
+            res.json({ 
+                status: 'error', 
+                database: 'error',
+                error: err.message
+            });
+        } else {
+            console.log('✅ Health check passed - scores count:', row.count);
+            res.json({ 
+                status: 'healthy', 
+                database: 'connected',
+                scores_count: row.count,
+                timestamp: new Date().toISOString()
+            });
+        }
+    });
+});
+
 // Save a new score
 app.post('/api/scores', (req, res) => {
+    console.log('📥 Received POST /api/scores request');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
     if (!db) {
+        console.error('❌ Database not available');
         return res.status(503).json({ error: 'Database not available' });
     }
+    
     const {
         sessionId,
         name,
@@ -68,20 +106,30 @@ app.post('/api/scores', (req, res) => {
         resultsCode
     } = req.body;
 
+    console.log('🔍 Validating fields...');
+    console.log('sessionId:', sessionId);
+    console.log('name:', name);
+    console.log('email:', email);
+
     // Validate required fields
     if (!sessionId || !name || !email || !completionTime || !timeString || 
         !difficulty || !moveCount || accuracy === undefined || !completedAt || !resultsCode) {
+        console.error('❌ Missing required fields');
         return res.status(400).json({ 
             error: 'Missing required fields',
-            required: ['sessionId', 'name', 'email', 'completionTime', 'timeString', 'difficulty', 'moveCount', 'accuracy', 'completedAt', 'resultsCode']
+            required: ['sessionId', 'name', 'email', 'completionTime', 'timeString', 'difficulty', 'moveCount', 'accuracy', 'completedAt', 'resultsCode'],
+            received: req.body
         });
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+        console.error('❌ Invalid email format:', email);
         return res.status(400).json({ error: 'Invalid email format' });
     }
+
+    console.log('✅ All validations passed, inserting into database...');
 
     const sql = `INSERT INTO scores (
         session_id, name, email, completion_time, time_string, 
@@ -93,10 +141,13 @@ app.post('/api/scores', (req, res) => {
         difficulty, moveCount, accuracy, completedAt, resultsCode
     ], function(err) {
         if (err) {
-            console.error('Error saving score:', err.message);
-            res.status(500).json({ error: 'Failed to save score' });
+            console.error('❌ Database error saving score:', err.message);
+            console.error('SQL:', sql);
+            console.error('Values:', [sessionId, name, email, completionTime, timeString, difficulty, moveCount, accuracy, completedAt, resultsCode]);
+            res.status(500).json({ error: 'Failed to save score', details: err.message });
         } else {
-            console.log(`Score saved with ID: ${this.lastID}`);
+            console.log(`✅ Score saved successfully with ID: ${this.lastID}`);
+            console.log(`📊 Total changes: ${this.changes}`);
             res.json({ 
                 id: this.lastID, 
                 message: 'Score saved successfully',
@@ -108,8 +159,17 @@ app.post('/api/scores', (req, res) => {
 
 // Get leaderboard (top scores)
 app.get('/api/leaderboard', (req, res) => {
+    console.log('📊 Received GET /api/leaderboard request');
+    
+    if (!db) {
+        console.error('❌ Database not available for leaderboard');
+        return res.status(503).json({ error: 'Database not available' });
+    }
+    
     const limit = req.query.limit || 10;
     const difficulty = req.query.difficulty;
+    
+    console.log('Query params - limit:', limit, 'difficulty:', difficulty);
     
     let sql = `SELECT 
         id, session_id, name, completion_time, time_string, 
@@ -125,12 +185,17 @@ app.get('/api/leaderboard', (req, res) => {
     
     sql += ' ORDER BY completion_time ASC LIMIT ?';
     params.push(limit);
+    
+    console.log('🔍 Executing SQL:', sql);
+    console.log('Parameters:', params);
 
     db.all(sql, params, (err, rows) => {
         if (err) {
-            console.error('Error fetching leaderboard:', err.message);
+            console.error('❌ Error fetching leaderboard:', err.message);
             res.status(500).json({ error: 'Failed to fetch leaderboard' });
         } else {
+            console.log(`✅ Found ${rows.length} leaderboard entries`);
+            console.log('First few entries:', rows.slice(0, 3));
             res.json(rows);
         }
     });
@@ -196,6 +261,7 @@ process.on('SIGINT', () => {
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
     console.log('API endpoints:');
+    console.log('  GET /api/health - Database health check');
     console.log('  POST /api/scores - Save a new score');
     console.log('  GET /api/leaderboard - Get top scores');
     console.log('  GET /api/scores/export - Export all scores');
