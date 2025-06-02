@@ -726,7 +726,7 @@
         <div class="modal-content">
             <h2>🎉 Puzzle Completed! 🎉</h2>
             <div class="completion-time" id="finalTime"></div>
-            <p>Congratulations on making it through to Day 7. Please follow this link to upload your answers to all the clues from the week. Please remember, it is one entry per person.</p>
+            <p>Congratulations! You've successfully completed the puzzle.</p>
             
             <div id="userInfoForm" style="margin: 20px 0;">
                 <h3>Save Your Score!</h3>
@@ -738,11 +738,12 @@
                     <input type="email" id="userEmail" placeholder="Your Email" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
                 </div>
                 <button class="btn success" onclick="saveScore()" id="saveScoreBtn">💾 Save Score</button>
-                <button class="btn secondary" onclick="skipSaving()" style="margin-left: 10px;">Skip</button>
             </div>
             
             <div id="resultsSection" style="display: none;">
-                <h3>Your Results:</h3>
+                <h3>🎉 Congratulations on making it through to Day 7! 🎉</h3>
+                <p style="margin: 15px 0; font-size: 16px; color: #4CAF50; font-weight: bold;">Please follow this link to upload your answers to all the clues from the week. Please remember, it is one entry per person.</p>
+                <h4>Your Results:</h4>
                 <div class="results-code" id="resultsCode"></div>
                 
                 <div style="margin: 20px 0;">
@@ -751,7 +752,7 @@
                     <button class="btn" onclick="shareResults()">📤 Share Results</button>
                 </div>
                 
-                <button class="btn secondary" onclick="closeModal()">Close</button>
+                <button class="btn success" onclick="submitQuizAnswers()">📝 Submit Quiz Answers</button>
             </div>
         </div>
     </div>
@@ -2271,6 +2272,17 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
         
         function closeModal() {
             document.getElementById('completionModal').style.display = 'none';
+        }
+        
+        function submitQuizAnswers() {
+            // TODO: Replace with actual quiz submission URL
+            const quizUrl = 'https://example.com/quiz-submission'; // PLACEHOLDER - Replace with actual URL
+            
+            // Open quiz submission page in new window/tab
+            window.open(quizUrl, '_blank');
+            
+            // Optionally close the modal after opening the quiz
+            closeModal();
         }
         
         function copyResults() {
