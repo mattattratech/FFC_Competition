@@ -912,7 +912,7 @@
                 
                 // Global touch events for dragging - only prevent default when actually dragging
                 document.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
-                document.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: true });
+                document.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
                 
                 // Auto-save every 5 seconds
                 setInterval(() => this.saveToStorage(), 5000);
@@ -1212,6 +1212,11 @@
                     this.doRender();
                     this.renderPending = false;
                 });
+            }
+            
+            // Force immediate render without throttling
+            forceRender() {
+                this.doRender();
             }
             
             doRender() {
@@ -1521,58 +1526,31 @@
             snapBackToOriginal() {
                 if (!this.draggedPiece || !this.originalPosition) return;
                 
-                // Store references to prevent null errors during animation
                 const piece = this.draggedPiece;
                 const originalPos = this.originalPosition;
                 
-                // Animate snap-back for better user feedback
-                const startX = piece.x;
-                const startY = piece.y;
-                const targetX = originalPos.x;
-                const targetY = originalPos.y;
+                console.log(`⬅️ Immediately snapping piece ${piece.id} back to original position`);
                 
-                const duration = 300; // Animation duration in ms
-                const startTime = Date.now();
+                // Immediately restore to original position - no animation
+                piece.x = originalPos.x;
+                piece.y = originalPos.y;
+                piece.placed = originalPos.placed;
+                piece.currentRow = originalPos.currentRow;
+                piece.currentCol = originalPos.currentCol;
                 
-                const animate = () => {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    
-                    // Easing function for smooth animation
-                    const easeOut = 1 - Math.pow(1 - progress, 3);
-                    
-                    // Interpolate position - check piece still exists
-                    if (piece) {
-                        piece.x = startX + (targetX - startX) * easeOut;
-                        piece.y = startY + (targetY - startY) * easeOut;
-                    }
-                    
-                    this.render();
-                    
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
-                        // Animation complete - restore full state
-                        if (piece && originalPos) {
-                            piece.placed = originalPos.placed;
-                            piece.currentRow = originalPos.currentRow;
-                            piece.currentCol = originalPos.currentCol;
-                        }
-                        
-                        // Clear drag state now that animation is complete
-                        this.draggedPiece = null;
-                        this.dragSource = null;
-                        this.originalPosition = null;
-                        document.body.classList.remove('dragging');
-                        
-                        this.render();
-                        this.updateDisplay();
-                        this.saveToStorage();
-                    }
-                };
+                // Clear drag state immediately
+                this.draggedPiece = null;
+                this.dragSource = null;
+                this.originalPosition = null;
+                document.body.classList.remove('dragging');
                 
-                console.log(`⬅️ Snapping piece ${piece.id} back to original position`);
-                requestAnimationFrame(animate);
+                // Force immediate re-render
+                this.staticContentDirty = true;
+                this.forceRender();
+                this.updateDisplay();
+                this.saveToStorage();
+                
+                console.log(`✅ Piece ${piece.id} snapped back immediately`);
             }
             
             onMouseDown(e, canvasType) {
@@ -1690,13 +1668,16 @@
                     
                     // Clear drag state
                     console.log('Clearing drag state');
+                    const wasDropped = this.draggedPiece;
                     this.draggedPiece = null;
                     this.dragSource = null;
                     this.originalPosition = null;
                     document.body.classList.remove('dragging');
                     
-                    // Force a re-render to ensure UI is updated
+                    // Force a complete re-render to ensure UI is updated
+                    this.staticContentDirty = true;
                     this.render();
+                    console.log('Forced re-render after drag end');
                 }
             }
             
@@ -1788,11 +1769,20 @@
                     e.preventDefault();
                     console.log('Touch end - checking drop');
                     this.checkDrop(e);
+                    
+                    // Clear drag state
+                    console.log('Clearing touch drag state');
                     this.draggedPiece = null;
                     this.dragSource = null;
                     this.originalPosition = null;
                     document.body.classList.remove('dragging');
+                    
+                    // Force a complete re-render to ensure UI is updated
+                    this.staticContentDirty = true;
+                    this.render();
+                    console.log('Forced re-render after touch end');
                 }
+                // If not dragging, allow normal touch behavior (no preventDefault)
             }
             
             checkDrop(e) {
@@ -1853,20 +1843,25 @@
                         p.placed && p.currentRow === row && p.currentCol === col && p !== this.draggedPiece);
                     
                     if (!occupiedPiece) {
-                        // Position is free - place piece with smooth animation
-                        this.placePieceAt(this.draggedPiece, row, col);
+                        // Position is free - place piece immediately
+                        console.log(`Position (${row}, ${col}) is free, placing piece ${this.draggedPiece.id}`);
+                        this.placePieceImmediately(this.draggedPiece, row, col);
                     } else {
                         // Position occupied - swap the pieces
-                        this.swapPieces(this.draggedPiece, occupiedPiece, row, col);
+                        console.log(`Position (${row}, ${col}) occupied by piece ${occupiedPiece.id}, swapping with piece ${this.draggedPiece.id}`);
+                        this.swapPiecesImmediately(this.draggedPiece, occupiedPiece, row, col);
                     }
                 } else {
                     // Dropped outside - return to original position
+                    console.log('Dropped outside puzzle area, snapping back');
                     this.snapBackToOriginal();
                     return;
                 }
             }
             
-            placePieceAt(piece, row, col) {
+            placePieceImmediately(piece, row, col) {
+                console.log(`Immediately placing piece ${piece.id} at row ${row}, col ${col}`);
+                
                 piece.placed = true;
                 piece.currentRow = row;
                 piece.currentCol = col;
@@ -1874,10 +1869,36 @@
                 // Check if correct placement
                 if (row === piece.correctRow && col === piece.correctCol) {
                     this.correctMoves++;
+                    console.log(`Correct placement! Piece ${piece.id} in right spot`);
                 }
                 
-                // Mark static content as dirty
+                // Mark static content as dirty and force immediate re-render
                 this.staticContentDirty = true;
+                this.forceRender();
+                
+                this.updateDisplay();
+                this.checkWin();
+                this.saveToStorage();
+                
+                console.log(`Piece ${piece.id} successfully placed immediately`);
+            }
+            
+            placePieceAt(piece, row, col) {
+                console.log(`Placing piece ${piece.id} at row ${row}, col ${col}`);
+                
+                piece.placed = true;
+                piece.currentRow = row;
+                piece.currentCol = col;
+                
+                // Check if correct placement
+                if (row === piece.correctRow && col === piece.correctCol) {
+                    this.correctMoves++;
+                    console.log(`Correct placement! Piece ${piece.id} in right spot`);
+                }
+                
+                // Mark static content as dirty and force immediate re-render
+                this.staticContentDirty = true;
+                this.render();
                 
                 // Smooth animation to final position
                 this.animateToPosition(piece, col * this.pieceWidth, row * this.pieceHeight);
@@ -1885,6 +1906,40 @@
                 this.updateDisplay();
                 this.checkWin();
                 this.saveToStorage();
+            }
+            
+            swapPiecesImmediately(draggedPiece, occupiedPiece, newRow, newCol) {
+                console.log(`Swapping pieces: ${draggedPiece.id} -> (${newRow}, ${newCol}), ${occupiedPiece.id} -> original position`);
+                
+                // Store occupied piece's current position
+                const occupiedRow = occupiedPiece.currentRow;
+                const occupiedCol = occupiedPiece.currentCol;
+                
+                // Move occupied piece to dragged piece's original position
+                if (this.originalPosition && this.originalPosition.placed) {
+                    // Swap within puzzle grid
+                    occupiedPiece.currentRow = this.originalPosition.currentRow;
+                    occupiedPiece.currentCol = this.originalPosition.currentCol;
+                    occupiedPiece.placed = true;
+                    console.log(`Occupied piece ${occupiedPiece.id} moved to grid position (${this.originalPosition.currentRow}, ${this.originalPosition.currentCol})`);
+                } else {
+                    // Move occupied piece back to pieces area
+                    occupiedPiece.placed = false;
+                    occupiedPiece.currentRow = -1;
+                    occupiedPiece.currentCol = -1;
+                    occupiedPiece.x = this.originalPosition ? this.originalPosition.x : 0;
+                    occupiedPiece.y = this.originalPosition ? this.originalPosition.y : 0;
+                    console.log(`Occupied piece ${occupiedPiece.id} moved back to pieces area at (${occupiedPiece.x}, ${occupiedPiece.y})`);
+                }
+                
+                // Place dragged piece in new position immediately
+                this.placePieceImmediately(draggedPiece, newRow, newCol);
+                
+                // Update display and save
+                this.updateDisplay();
+                this.saveToStorage();
+                
+                console.log(`✅ Piece swap completed successfully`);
             }
             
             swapPieces(draggedPiece, occupiedPiece, newRow, newCol) {
