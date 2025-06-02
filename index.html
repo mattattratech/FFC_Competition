@@ -1184,8 +1184,14 @@
             updateDisplay() {
                 const placedPieces = this.pieces.filter(p => p.placed).length;
                 const totalPieces = this.pieces.length;
+                const correctlyPlacedPieces = this.pieces.filter(p => 
+                    p.placed && p.currentRow === p.correctRow && p.currentCol === p.correctCol
+                ).length;
+                
                 const progress = totalPieces > 0 ? (placedPieces / totalPieces) * 100 : 0;
                 const accuracy = this.moveCount > 0 ? Math.round((this.correctMoves / this.moveCount) * 100) : 0;
+                
+                console.log(`Display update: ${placedPieces}/${totalPieces} pieces placed, ${correctlyPlacedPieces} correct, ${this.correctMoves}/${this.moveCount} moves correct (${accuracy}%)`);
                 
                 document.getElementById('piecesPlaced').textContent = placedPieces;
                 document.getElementById('totalPieces').textContent = totalPieces;
@@ -1473,14 +1479,24 @@
                         this.pieceWidth, this.pieceHeight
                     );
                     
-                    // Draw border
+                    // Draw border with correct placement indicator
                     ctx.shadowColor = 'transparent';
-                    ctx.strokeStyle = piece.placed && 
+                    const isCorrectlyPlaced = piece.placed && 
                         piece.currentRow === piece.correctRow && 
-                        piece.currentCol === piece.correctCol ? '#4CAF50' : '#333';
-                    ctx.lineWidth = piece.placed && 
-                        piece.currentRow === piece.correctRow && 
-                        piece.currentCol === piece.correctCol ? 3 : 2;
+                        piece.currentCol === piece.correctCol;
+                    
+                    if (isCorrectlyPlaced) {
+                        ctx.strokeStyle = '#4CAF50'; // Green for correct placement
+                        ctx.lineWidth = 3;
+                        console.log(`Drawing green border for correctly placed piece ${piece.id} at (${piece.currentRow}, ${piece.currentCol})`);
+                    } else {
+                        ctx.strokeStyle = '#333'; // Dark gray for incorrect/unplaced
+                        ctx.lineWidth = 2;
+                        if (piece.placed) {
+                            console.log(`Drawing gray border for incorrectly placed piece ${piece.id} at (${piece.currentRow}, ${piece.currentCol}) - should be at (${piece.correctRow}, ${piece.correctCol})`);
+                        }
+                    }
+                    
                     ctx.strokeRect(x, y, this.pieceWidth, this.pieceHeight);
                 }
                 
@@ -1944,15 +1960,21 @@
             
             placePieceImmediately(piece, row, col) {
                 console.log(`Immediately placing piece ${piece.id} at row ${row}, col ${col}`);
+                console.log(`Piece ${piece.id} correct position: row ${piece.correctRow}, col ${piece.correctCol}`);
                 
                 piece.placed = true;
                 piece.currentRow = row;
                 piece.currentCol = col;
                 
-                // Check if correct placement
+                // Check if correct placement and update move counts
+                this.moveCount++;
+                console.log(`Total moves: ${this.moveCount}`);
+                
                 if (row === piece.correctRow && col === piece.correctCol) {
                     this.correctMoves++;
-                    console.log(`Correct placement! Piece ${piece.id} in right spot`);
+                    console.log(`✅ Correct placement! Piece ${piece.id} in right spot (${this.correctMoves}/${this.moveCount} correct)`);
+                } else {
+                    console.log(`❌ Incorrect placement! Piece ${piece.id} should be at (${piece.correctRow}, ${piece.correctCol}) but placed at (${row}, ${col})`);
                 }
                 
                 // Mark static content as dirty and force immediate re-render
@@ -2016,6 +2038,7 @@
                 }
                 
                 // Place dragged piece in new position immediately
+                // Note: placePieceImmediately will handle move count increment
                 this.placePieceImmediately(draggedPiece, newRow, newCol);
                 
                 // Update display and save
