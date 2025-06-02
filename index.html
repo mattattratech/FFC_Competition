@@ -1134,8 +1134,10 @@
                 // Assign each piece a unique random position using current canvas/piece dimensions
                 this.pieces.forEach((piece, index) => {
                     const position = allPositions[index];
-                    piece.x = position.x;
-                    piece.y = position.y;
+                    // Ensure exact grid positioning
+                    const snappedPos = this.snapToGridXY(position.x, position.y);
+                    piece.x = snappedPos.x;
+                    piece.y = snappedPos.y;
                     
                     // Debug: check if pieces are positioned outside canvas
                     if (piece.x + this.pieceWidth > this.canvasSize || piece.y + this.pieceHeight > this.canvasSize) {
@@ -1145,6 +1147,7 @@
                 
                 console.log(`Repositioned all ${this.pieces.length} pieces with current dimensions`);
                 console.log(`Sample positions:`, this.pieces.slice(0, 3).map(p => `Piece ${p.id}: (${p.x}, ${p.y})`));
+                console.log(`Grid step: ${this.pieceWidth}px`);
                 
                 this.render();
             }
@@ -1852,11 +1855,91 @@
                         this.swapPiecesImmediately(this.draggedPiece, occupiedPiece, row, col);
                     }
                 } else {
-                    // Dropped outside - return to original position
-                    console.log('Dropped outside puzzle area, snapping back');
-                    this.snapBackToOriginal();
+                    // Dropped outside puzzle area
+                    if (this.dragSource === 'puzzle') {
+                        // Piece came from puzzle grid - move it back to pieces area
+                        console.log('Moving piece from puzzle grid back to pieces area');
+                        this.movePieceBackToPiecesArea(this.draggedPiece);
+                    } else {
+                        // Piece came from pieces area - snap back to original position
+                        console.log('Dropped outside puzzle area, snapping back');
+                        this.snapBackToOriginal();
+                    }
                     return;
                 }
+            }
+            
+            movePieceBackToPiecesArea(piece) {
+                console.log(`Moving piece ${piece.id} back to pieces area`);
+                
+                // Find an available position in the pieces area
+                const availablePosition = this.findAvailablePositionInPiecesArea();
+                
+                // Remove from puzzle grid
+                piece.placed = false;
+                piece.currentRow = -1;
+                piece.currentCol = -1;
+                
+                // Ensure exact grid positioning
+                const snappedPos = this.snapToGridXY(availablePosition.x, availablePosition.y);
+                piece.x = snappedPos.x;
+                piece.y = snappedPos.y;
+                
+                // Force immediate re-render
+                this.staticContentDirty = true;
+                this.forceRender();
+                
+                this.updateDisplay();
+                this.saveToStorage();
+                
+                console.log(`✅ Piece ${piece.id} moved back to pieces area at (${piece.x}, ${piece.y})`);
+            }
+            
+            snapToGrid(coordinate, isY = false) {
+                // Snap coordinate to nearest grid boundary
+                const gridStep = isY ? this.pieceHeight : this.pieceWidth;
+                return Math.round(coordinate / gridStep) * gridStep;
+            }
+            
+            snapToGridXY(x, y) {
+                return {
+                    x: this.snapToGrid(x, false),
+                    y: this.snapToGrid(y, true)
+                };
+            }
+            
+            findAvailablePositionInPiecesArea() {
+                console.log(`Finding available position - pieceWidth: ${this.pieceWidth}, pieceHeight: ${this.pieceHeight}`);
+                
+                // Create a grid of all possible positions in pieces area
+                const allPositions = [];
+                for (let row = 0; row < this.gridSize; row++) {
+                    for (let col = 0; col < this.gridSize; col++) {
+                        const x = col * this.pieceWidth;
+                        const y = row * this.pieceHeight;
+                        allPositions.push({ x, y, row, col });
+                    }
+                }
+                
+                // Find positions that are not occupied by unplaced pieces
+                const unplacedPieces = this.pieces.filter(p => !p.placed);
+                console.log(`Unplaced pieces positions:`, unplacedPieces.map(p => `Piece ${p.id}: (${p.x}, ${p.y})`));
+                
+                // Check each position to see if it's occupied
+                for (const pos of allPositions) {
+                    const isOccupied = unplacedPieces.some(piece => 
+                        Math.abs(piece.x - pos.x) < 1 && Math.abs(piece.y - pos.y) < 1
+                    );
+                    
+                    if (!isOccupied) {
+                        console.log(`Found available position at (${pos.x}, ${pos.y}) - grid (${pos.row}, ${pos.col})`);
+                        return pos;
+                    }
+                }
+                
+                // If all positions are occupied, place at (0,0) - pieces can overlap
+                console.log('All positions occupied, placing at (0,0)');
+                return { x: 0, y: 0 };
             }
             
             placePieceImmediately(piece, row, col) {
