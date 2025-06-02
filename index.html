@@ -1017,9 +1017,10 @@
             
             createFallbackImage() {
                 // Create a simple colored pattern as fallback
+                // Always use 400x400 for consistent image sampling
                 const canvas = document.createElement('canvas');
-                canvas.width = this.canvasSize;
-                canvas.height = this.canvasSize;
+                canvas.width = 400;
+                canvas.height = 400;
                 const ctx = canvas.getContext('2d');
                 
                 // Create a colorful pattern
@@ -1410,6 +1411,13 @@
                 
                 ctx.save();
                 
+                // Calculate source coordinates from original image dimensions
+                // Always use a fixed reference size (400px) for consistent image sampling
+                const baseSize = 400;
+                const basePieceSize = baseSize / this.gridSize;
+                const sourceX = piece.correctCol * basePieceSize;
+                const sourceY = piece.correctRow * basePieceSize;
+                
                 // Enhanced shadow and scaling for dragged pieces
                 const isDragged = piece === this.draggedPiece;
                 
@@ -1427,11 +1435,11 @@
                     const offsetX = (scaledWidth - this.pieceWidth) / 2;
                     const offsetY = (scaledHeight - this.pieceHeight) / 2;
                     
-                    // Draw scaled piece
+                    // Draw scaled piece using consistent source coordinates
                     ctx.drawImage(
                         this.image,
-                        piece.correctCol * this.pieceWidth, piece.correctRow * this.pieceHeight,
-                        this.pieceWidth, this.pieceHeight,
+                        sourceX, sourceY,
+                        basePieceSize, basePieceSize,
                         x - offsetX, y - offsetY,
                         scaledWidth, scaledHeight
                     );
@@ -1448,11 +1456,11 @@
                     ctx.shadowOffsetX = 2;
                     ctx.shadowOffsetY = 2;
                     
-                    // Draw the piece image normally
+                    // Draw the piece image using consistent source coordinates
                     ctx.drawImage(
                         this.image,
-                        piece.correctCol * this.pieceWidth, piece.correctRow * this.pieceHeight,
-                        this.pieceWidth, this.pieceHeight,
+                        sourceX, sourceY,
+                        basePieceSize, basePieceSize,
                         x, y,
                         this.pieceWidth, this.pieceHeight
                     );
