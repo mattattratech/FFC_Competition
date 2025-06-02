@@ -600,18 +600,22 @@
             }
             
             .game-area {
-                gap: 10px;
+                gap: 15px;
                 flex-direction: row;
                 justify-content: center;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
+                align-items: flex-start;
             }
             
             .canvas-container {
-                max-width: 300px;
+                max-width: 380px;
+                width: auto;
             }
             
             canvas {
-                max-width: 300px !important;
+                max-width: 380px !important;
+                height: auto !important;
+                width: auto !important;
             }
             
             .timer {
@@ -620,6 +624,25 @@
             
             .session-id {
                 font-size: 12px;
+            }
+            
+            /* Make stats more compact for landscape */
+            .stats {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+            
+            .stat {
+                min-width: auto;
+                margin: 0 5px;
+            }
+            
+            .stat-value {
+                font-size: 16px;
+            }
+            
+            .stat-label {
+                font-size: 10px;
             }
         }
     </style>
@@ -782,15 +805,25 @@
                 }
                 
                 if (this.isLandscape) {
-                    // In landscape mode, use smaller size to fit both canvases
-                    return Math.min(300, (window.innerHeight - 200) * 0.8);
+                    // In landscape mode, use larger size for better touch interaction
+                    const availableWidth = window.innerWidth / 2 - 40; // Half screen minus padding
+                    const availableHeight = window.innerHeight - 150; // Screen height minus UI
+                    const size = Math.min(380, Math.max(320, Math.min(availableWidth, availableHeight)));
+                    console.log('Mobile landscape - calculated canvas size:', size);
+                    return size;
                 } else {
                     // Portrait mode (though this will be hidden)
-                    return Math.min(350, window.innerWidth - 50);
+                    const availableWidth = window.innerWidth - 50;
+                    const size = Math.min(350, Math.max(250, availableWidth));
+                    console.log('Mobile portrait - window width:', window.innerWidth, 'available:', availableWidth, 'canvas size:', size);
+                    return size;
                 }
             }
             
             setupCanvasSize() {
+                console.log('Setting up canvas size:', this.canvasSize);
+                console.log('Is mobile:', this.isMobile, 'Is landscape:', this.isLandscape);
+                
                 // Set canvas size based on device
                 this.puzzleCanvas.width = this.canvasSize;
                 this.puzzleCanvas.height = this.canvasSize;
@@ -800,6 +833,9 @@
                 // Update piece dimensions
                 this.pieceWidth = this.canvasSize / this.gridSize;
                 this.pieceHeight = this.canvasSize / this.gridSize;
+                
+                console.log('Canvas dimensions set to:', this.canvasSize, 'x', this.canvasSize);
+                console.log('Piece dimensions:', this.pieceWidth, 'x', this.pieceHeight);
                 
                 // Handle window resize and orientation change
                 window.addEventListener('resize', () => {
@@ -812,8 +848,37 @@
                     
                     if (newCanvasSize !== this.canvasSize || wasMobile !== this.isMobile || wasLandscape !== this.isLandscape) {
                         this.canvasSize = newCanvasSize;
-                        this.setupCanvasSize();
+                        this.pieceWidth = this.canvasSize / this.gridSize;
+                        this.pieceHeight = this.canvasSize / this.gridSize;
+                        
+                        // Update canvas dimensions
+                        this.puzzleCanvas.width = this.canvasSize;
+                        this.puzzleCanvas.height = this.canvasSize;
+                        this.piecesCanvas.width = this.canvasSize;
+                        this.piecesCanvas.height = this.canvasSize;
+                        
+                        // Reposition existing pieces for new canvas size
+                        if (this.pieces.length > 0) {
+                            console.log('Repositioning pieces for new canvas size...');
+                            
+                            // Update positions for placed pieces on the puzzle grid
+                            this.pieces.forEach(piece => {
+                                if (piece.placed) {
+                                    // Pieces on puzzle grid are positioned by their grid coordinates
+                                    // No need to update x,y as they're calculated during rendering
+                                } else {
+                                    // Pieces on pieces canvas need repositioning
+                                    // This will be handled by shufflePieces
+                                }
+                            });
+                            
+                            this.shufflePieces();
+                        }
+                        
+                        // Mark static content as dirty and re-render
+                        this.staticContentDirty = true;
                         this.render();
+                        console.log('Canvas resized and re-rendered');
                     }
                 });
             }
@@ -990,6 +1055,10 @@
             }
             
             createPuzzle() {
+                console.log('=== Creating puzzle ===');
+                console.log('Canvas size:', this.canvasSize);
+                console.log('Grid size:', this.gridSize);
+                
                 this.resetGame();
                 this.pieces = [];
                 this.pieceWidth = this.canvasSize / this.gridSize;
@@ -1028,45 +1097,30 @@
                 if (!this.pieces.length) return;
                 
                 console.log(`Shuffling ${this.pieces.length} pieces in ${this.gridSize}x${this.gridSize} grid`);
+                console.log(`Canvas size: ${this.canvasSize}, Piece size: ${this.pieceWidth}x${this.pieceHeight}`);
                 
-                // Reset all pieces
+                // Reset all pieces that are placed
                 this.pieces.forEach(piece => {
-                    piece.placed = false;
-                    piece.currentRow = -1;
-                    piece.currentCol = -1;
+                    if (piece.placed) {
+                        piece.placed = false;
+                        piece.currentRow = -1;
+                        piece.currentCol = -1;
+                    }
                 });
                 
                 // Mark static content as dirty
                 this.staticContentDirty = true;
                 
-                // Position pieces in exact 8x8 grid layout to match puzzle canvas
-                this.pieces.forEach((piece, index) => {
-                    const row = Math.floor(index / this.gridSize);
-                    const col = index % this.gridSize;
-                    // Use exact same positioning as puzzle grid - no margins between pieces
-                    piece.x = col * this.pieceWidth;
-                    piece.y = row * this.pieceHeight;
-                    
-                    // Debug: check if pieces are positioned outside canvas
-                    if (piece.x + this.pieceWidth > this.canvasSize || piece.y + this.pieceHeight > this.canvasSize) {
-                        console.warn(`Piece ${piece.id} positioned outside canvas: (${piece.x}, ${piece.y})`);
-                    }
-                });
-                
-                console.log(`Positioned pieces in ${this.gridSize}x${this.gridSize} grid, piece size: ${this.pieceWidth}x${this.pieceHeight}`);
-                console.log(`Sample positions:`, this.pieces.slice(0, 3).map(p => `(${p.x}, ${p.y})`));
-                
-                // Shuffle array to randomize piece order
-                for (let i = this.pieces.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [this.pieces[i], this.pieces[j]] = [this.pieces[j], this.pieces[i]];
-                }
-                
-                // Create a shuffled array of all 64 positions
+                // Create a shuffled array of all positions in the pieces canvas
                 const allPositions = [];
                 for (let row = 0; row < this.gridSize; row++) {
                     for (let col = 0; col < this.gridSize; col++) {
-                        allPositions.push({ row, col });
+                        allPositions.push({ 
+                            row, 
+                            col,
+                            x: col * this.pieceWidth,
+                            y: row * this.pieceHeight
+                        });
                     }
                 }
                 
@@ -1076,14 +1130,20 @@
                     [allPositions[i], allPositions[j]] = [allPositions[j], allPositions[i]];
                 }
                 
-                // Assign each piece a unique random position
+                // Assign each piece a unique random position using current canvas/piece dimensions
                 this.pieces.forEach((piece, index) => {
                     const position = allPositions[index];
-                    piece.x = position.col * this.pieceWidth;
-                    piece.y = position.row * this.pieceHeight;
+                    piece.x = position.x;
+                    piece.y = position.y;
+                    
+                    // Debug: check if pieces are positioned outside canvas
+                    if (piece.x + this.pieceWidth > this.canvasSize || piece.y + this.pieceHeight > this.canvasSize) {
+                        console.warn(`Piece ${piece.id} positioned outside canvas: (${piece.x}, ${piece.y}) - canvas: ${this.canvasSize}x${this.canvasSize}`);
+                    }
                 });
                 
-                console.log(`Positioned all ${this.pieces.length} pieces in randomized grid locations`);
+                console.log(`Repositioned all ${this.pieces.length} pieces with current dimensions`);
+                console.log(`Sample positions:`, this.pieces.slice(0, 3).map(p => `Piece ${p.id}: (${p.x}, ${p.y})`));
                 
                 this.render();
             }
@@ -1154,6 +1214,7 @@
             }
             
             doRender() {
+                console.log('Rendering - canvas size:', this.canvasSize, 'pieces:', this.pieces.length);
                 // Only clear and redraw when necessary
                 this.renderStaticContent();
                 this.renderDraggedPiece();
