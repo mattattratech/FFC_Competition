@@ -488,9 +488,155 @@
                 touch-action: pan-y;
             }
         }
+        
+        /* Orientation-specific styles */
+        .orientation-message {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #142435;
+            z-index: 2000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .orientation-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 350px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .rotate-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: rotatePhone 2s ease-in-out infinite;
+        }
+        
+        @keyframes rotatePhone {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        
+        .orientation-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .orientation-text {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        
+        .orientation-subtitle {
+            color: #4CAF50;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        /* Show orientation message only on mobile/tablet in portrait mode */
+        @media screen and (max-width: 1024px) and (orientation: portrait) {
+            .orientation-message {
+                display: flex;
+            }
+            
+            .container {
+                display: none;
+            }
+        }
+        
+        /* Optimize landscape mode for mobile devices */
+        @media screen and (max-width: 1024px) and (orientation: landscape) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+                max-width: 100%;
+            }
+            
+            h1 {
+                font-size: 20px;
+                margin: 8px 0;
+            }
+            
+            .logo-image {
+                max-height: 50px;
+            }
+            
+            .session-info {
+                padding: 10px;
+                margin-bottom: 15px;
+            }
+            
+            .stats {
+                padding: 8px;
+                margin: 10px 0;
+            }
+            
+            .controls {
+                margin-bottom: 10px;
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 8px 12px;
+                font-size: 14px;
+                min-height: 40px;
+            }
+            
+            .game-area {
+                gap: 10px;
+                flex-direction: row;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .canvas-container {
+                max-width: 300px;
+            }
+            
+            canvas {
+                max-width: 300px !important;
+            }
+            
+            .timer {
+                font-size: 18px;
+            }
+            
+            .session-id {
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Orientation Message for Portrait Mode -->
+    <div class="orientation-message">
+        <div class="orientation-content">
+            <div class="rotate-icon">📱</div>
+            <div class="orientation-title">Please Rotate Your Device</div>
+            <div class="orientation-text">
+                This puzzle is designed for landscape mode to give you the best playing experience with larger, easier-to-drag pieces.
+            </div>
+            <div class="orientation-subtitle">🔄 Turn your device sideways to continue</div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="header-branding">
             <div class="tratech-logo">
@@ -620,13 +766,28 @@
                 this.staticContentDirty = true;
                 
                 // Mobile support
-                this.isMobile = window.innerWidth <= 768;
-                this.canvasSize = this.isMobile ? Math.min(350, window.innerWidth - 50) : 400;
+                this.isMobile = window.innerWidth <= 1024;
+                this.isLandscape = window.innerWidth > window.innerHeight;
+                this.canvasSize = this.getOptimalCanvasSize();
                 
                 this.setupCanvasSize();
                 this.initializeSession();
                 this.initEventListeners();
                 this.loadFromStorage();
+            }
+            
+            getOptimalCanvasSize() {
+                if (!this.isMobile) {
+                    return 400; // Desktop size
+                }
+                
+                if (this.isLandscape) {
+                    // In landscape mode, use smaller size to fit both canvases
+                    return Math.min(300, (window.innerHeight - 200) * 0.8);
+                } else {
+                    // Portrait mode (though this will be hidden)
+                    return Math.min(350, window.innerWidth - 50);
+                }
             }
             
             setupCanvasSize() {
@@ -640,13 +801,16 @@
                 this.pieceWidth = this.canvasSize / this.gridSize;
                 this.pieceHeight = this.canvasSize / this.gridSize;
                 
-                // Handle window resize
+                // Handle window resize and orientation change
                 window.addEventListener('resize', () => {
                     const wasMobile = this.isMobile;
-                    this.isMobile = window.innerWidth <= 768;
-                    const newCanvasSize = this.isMobile ? Math.min(350, window.innerWidth - 50) : 400;
+                    const wasLandscape = this.isLandscape;
                     
-                    if (newCanvasSize !== this.canvasSize || wasMobile !== this.isMobile) {
+                    this.isMobile = window.innerWidth <= 1024;
+                    this.isLandscape = window.innerWidth > window.innerHeight;
+                    const newCanvasSize = this.getOptimalCanvasSize();
+                    
+                    if (newCanvasSize !== this.canvasSize || wasMobile !== this.isMobile || wasLandscape !== this.isLandscape) {
                         this.canvasSize = newCanvasSize;
                         this.setupCanvasSize();
                         this.render();
