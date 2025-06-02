@@ -314,6 +314,171 @@
             font-size: 12px !important;
             opacity: 0.7;
         }
+        
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                margin: 0;
+                padding: 15px;
+                border-radius: 10px;
+                max-width: 100%;
+            }
+            
+            h1 {
+                font-size: 22px;
+                margin: 10px 0 8px 0;
+            }
+            
+            .logo-image {
+                max-height: 60px;
+                max-width: 250px;
+            }
+            
+            .controls {
+                gap: 8px;
+                margin-bottom: 15px;
+                justify-content: center;
+            }
+            
+            .btn {
+                padding: 12px 16px;
+                font-size: 16px;
+                min-height: 48px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .game-area {
+                gap: 15px;
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .canvas-container {
+                width: 100%;
+                max-width: 350px;
+            }
+            
+            canvas {
+                width: 100% !important;
+                height: auto !important;
+                max-width: 350px;
+            }
+            
+            .stats {
+                padding: 10px;
+                margin: 15px 0;
+                gap: 5px;
+            }
+            
+            .stat {
+                flex: 1;
+                min-width: 70px;
+            }
+            
+            .stat-value {
+                font-size: 20px;
+            }
+            
+            .stat-label {
+                font-size: 11px;
+            }
+            
+            .modal-content {
+                padding: 20px;
+                width: 95%;
+                margin: 20px;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            
+            .timer {
+                font-size: 20px;
+            }
+            
+            .session-id {
+                font-size: 14px;
+                word-break: break-all;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                padding: 10px;
+                border-radius: 8px;
+            }
+            
+            h1 {
+                font-size: 18px;
+                line-height: 1.3;
+            }
+            
+            .logo-image {
+                max-height: 50px;
+                max-width: 200px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+            
+            .controls .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+            
+            .canvas-container {
+                max-width: calc(100vw - 30px);
+            }
+            
+            canvas {
+                max-width: calc(100vw - 30px) !important;
+            }
+            
+            .modal-content {
+                padding: 15px;
+                width: calc(100% - 20px);
+                border-radius: 8px;
+                margin: 10px;
+            }
+            
+            .completion-time {
+                font-size: 24px;
+            }
+            
+            .results-code {
+                font-size: 12px;
+                padding: 10px;
+            }
+        }
+        
+        /* Touch-friendly improvements */
+        @media (pointer: coarse) {
+            .btn {
+                min-height: 48px;
+                padding: 12px 20px;
+            }
+            
+            canvas {
+                touch-action: none;
+            }
+            
+            .canvas-container {
+                user-select: none;
+                -webkit-user-select: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -445,9 +610,39 @@
                 this.renderPending = false;
                 this.staticContentDirty = true;
                 
+                // Mobile support
+                this.isMobile = window.innerWidth <= 768;
+                this.canvasSize = this.isMobile ? Math.min(350, window.innerWidth - 50) : 400;
+                
+                this.setupCanvasSize();
                 this.initializeSession();
                 this.initEventListeners();
                 this.loadFromStorage();
+            }
+            
+            setupCanvasSize() {
+                // Set canvas size based on device
+                this.puzzleCanvas.width = this.canvasSize;
+                this.puzzleCanvas.height = this.canvasSize;
+                this.piecesCanvas.width = this.canvasSize;
+                this.piecesCanvas.height = this.canvasSize;
+                
+                // Update piece dimensions
+                this.pieceWidth = this.canvasSize / this.gridSize;
+                this.pieceHeight = this.canvasSize / this.gridSize;
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    const wasMobile = this.isMobile;
+                    this.isMobile = window.innerWidth <= 768;
+                    const newCanvasSize = this.isMobile ? Math.min(350, window.innerWidth - 50) : 400;
+                    
+                    if (newCanvasSize !== this.canvasSize || wasMobile !== this.isMobile) {
+                        this.canvasSize = newCanvasSize;
+                        this.setupCanvasSize();
+                        this.render();
+                    }
+                });
             }
             
             generateSessionId() {
@@ -474,12 +669,16 @@
                 document.addEventListener('mouseup', (e) => this.onMouseUp(e));
                 
                 // Touch events on both canvases
-                this.piecesCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e, 'pieces'));
-                this.puzzleCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e, 'puzzle'));
+                this.piecesCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e, 'pieces'), { passive: false });
+                this.puzzleCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e, 'puzzle'), { passive: false });
                 
                 // Global touch events for dragging
-                document.addEventListener('touchmove', (e) => this.onTouchMove(e));
-                document.addEventListener('touchend', (e) => this.onTouchEnd(e));
+                document.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+                document.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
+                
+                // Prevent default touch behavior on canvas containers
+                this.piecesCanvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+                this.puzzleCanvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
                 
                 // Auto-save every 5 seconds
                 setInterval(() => this.saveToStorage(), 5000);
@@ -538,8 +737,8 @@
                     if (gameState.imageData && gameState.pieces && gameState.pieces.length > 0) {
                         this.image = new Image();
                         this.image.onload = () => {
-                            this.pieceWidth = 400 / this.gridSize;
-                            this.pieceHeight = 400 / this.gridSize;
+                            this.pieceWidth = this.canvasSize / this.gridSize;
+                            this.pieceHeight = this.canvasSize / this.gridSize;
                             this.pieces = gameState.pieces;
                             this.render();
                             this.updateDisplay();
@@ -585,8 +784,8 @@
             createFallbackImage() {
                 // Create a simple colored pattern as fallback
                 const canvas = document.createElement('canvas');
-                canvas.width = 400;
-                canvas.height = 400;
+                canvas.width = this.canvasSize;
+                canvas.height = this.canvasSize;
                 const ctx = canvas.getContext('2d');
                 
                 // Create a colorful pattern
@@ -624,8 +823,8 @@
             createPuzzle() {
                 this.resetGame();
                 this.pieces = [];
-                this.pieceWidth = 400 / this.gridSize;
-                this.pieceHeight = 400 / this.gridSize;
+                this.pieceWidth = this.canvasSize / this.gridSize;
+                this.pieceHeight = this.canvasSize / this.gridSize;
                 
                 console.log(`Creating ${this.gridSize}x${this.gridSize} puzzle with ${this.pieceWidth}x${this.pieceHeight}px pieces`);
                 
@@ -680,7 +879,7 @@
                     piece.y = row * this.pieceHeight;
                     
                     // Debug: check if pieces are positioned outside canvas
-                    if (piece.x + this.pieceWidth > 400 || piece.y + this.pieceHeight > 400) {
+                    if (piece.x + this.pieceWidth > this.canvasSize || piece.y + this.pieceHeight > this.canvasSize) {
                         console.warn(`Piece ${piece.id} positioned outside canvas: (${piece.x}, ${piece.y})`);
                     }
                 });
@@ -795,8 +994,8 @@
                 // Always clear both canvases when dragging to prevent multiple instances
                 if (this.draggedPiece || this.staticContentDirty) {
                     // Clear both canvases
-                    this.puzzleCtx.clearRect(0, 0, 400, 400);
-                    this.piecesCtx.clearRect(0, 0, 400, 400);
+                    this.puzzleCtx.clearRect(0, 0, this.canvasSize, this.canvasSize);
+                    this.piecesCtx.clearRect(0, 0, this.canvasSize, this.canvasSize);
                     
                     // Draw grid
                     this.drawGrid(this.puzzleCtx);
@@ -888,14 +1087,14 @@
                     const pos = i * this.pieceWidth;
                     if (pos >= x - 2 && pos <= x + width + 2) {
                         this.puzzleCtx.moveTo(pos, Math.max(0, y - 2));
-                        this.puzzleCtx.lineTo(pos, Math.min(400, y + height + 2));
+                        this.puzzleCtx.lineTo(pos, Math.min(this.canvasSize, y + height + 2));
                     }
                 }
                 for (let i = 0; i <= this.gridSize; i++) {
                     const pos = i * this.pieceHeight;
                     if (pos >= y - 2 && pos <= y + height + 2) {
                         this.puzzleCtx.moveTo(Math.max(0, x - 2), pos);
-                        this.puzzleCtx.lineTo(Math.min(400, x + width + 2), pos);
+                        this.puzzleCtx.lineTo(Math.min(this.canvasSize, x + width + 2), pos);
                     }
                 }
                 this.puzzleCtx.stroke();
@@ -926,8 +1125,8 @@
                     this.draggedPiece.globalY >= puzzleRect.top - 30 && 
                     this.draggedPiece.globalY <= puzzleRect.bottom + 30) {
                     
-                    const x = Math.max(0, Math.min(this.draggedPiece.globalX - puzzleRect.left, 400));
-                    const y = Math.max(0, Math.min(this.draggedPiece.globalY - puzzleRect.top, 400));
+                    const x = Math.max(0, Math.min(this.draggedPiece.globalX - puzzleRect.left, this.canvasSize));
+                    const y = Math.max(0, Math.min(this.draggedPiece.globalY - puzzleRect.top, this.canvasSize));
                     
                     let col = Math.floor(x / this.pieceWidth);
                     let row = Math.floor(y / this.pieceHeight);
@@ -991,8 +1190,8 @@
                     ctx.shadowOffsetX = 5;
                     ctx.shadowOffsetY = 5;
                     
-                    // Slight scale up for dragged piece
-                    const scale = 1.05;
+                    // Larger scale up for mobile devices
+                    const scale = this.isMobile ? 1.15 : 1.05;
                     const scaledWidth = this.pieceWidth * scale;
                     const scaledHeight = this.pieceHeight * scale;
                     const offsetX = (scaledWidth - this.pieceWidth) / 2;
@@ -1213,14 +1412,14 @@
                 for (let i = 0; i <= this.gridSize; i++) {
                     const pos = i * this.pieceWidth;
                     ctx.moveTo(pos, 0);
-                    ctx.lineTo(pos, 400);
+                    ctx.lineTo(pos, this.canvasSize);
                 }
                 
                 // Draw all horizontal lines in one path
                 for (let i = 0; i <= this.gridSize; i++) {
                     const pos = i * this.pieceHeight;
                     ctx.moveTo(0, pos);
-                    ctx.lineTo(400, pos);
+                    ctx.lineTo(this.canvasSize, pos);
                 }
                 
                 ctx.stroke();
@@ -1326,13 +1525,19 @@
             onTouchMove(e) {
                 e.preventDefault();
                 if (this.draggedPiece) {
-                    // Calculate position relative to pieces canvas
+                    // Store global touch position for drop zone highlighting
+                    this.draggedPiece.globalX = e.touches[0].clientX;
+                    this.draggedPiece.globalY = e.touches[0].clientY;
+                    
+                    // Calculate position relative to pieces canvas for rendering
                     const rect = this.piecesCanvas.getBoundingClientRect();
                     const x = e.touches[0].clientX - rect.left;
                     const y = e.touches[0].clientY - rect.top;
                     
                     this.draggedPiece.x = x - this.dragOffset.x;
                     this.draggedPiece.y = y - this.dragOffset.y;
+                    
+                    // Throttle rendering during drag to reduce flickering
                     this.render();
                 }
             }
@@ -1379,8 +1584,8 @@
                     clientY >= puzzleRect.top - tolerance && clientY <= puzzleRect.bottom + tolerance) {
                     
                     // Smart grid snapping - find nearest valid position
-                    const x = Math.max(0, Math.min(clientX - puzzleRect.left, 400));
-                    const y = Math.max(0, Math.min(clientY - puzzleRect.top, 400));
+                    const x = Math.max(0, Math.min(clientX - puzzleRect.left, this.canvasSize));
+                    const y = Math.max(0, Math.min(clientY - puzzleRect.top, this.canvasSize));
                     
                     // Precise grid positioning - only snap when clearly within a cell
                     let col = Math.floor(x / this.pieceWidth);
