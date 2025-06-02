@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Farnborough FC Season Ticket Competition - Day 7 | Tratech Consulting</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Poppins', sans-serif;
             background: #142435;
             margin: 0;
             padding: 20px;
@@ -17,15 +19,17 @@
             overflow-x: hidden;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            color: #FFFFFF;
         }
         
         .container {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 30px 30px 20px 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             max-width: 1000px;
             width: 100%;
+            color: #142435;
         }
         
         .header-branding {
@@ -50,52 +54,54 @@
         }
         
         h1 {
-            color: #2c3e50;
+            color: #142435;
             margin: 15px 0 10px 0;
             font-size: 28px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
         }
         
         .competition-subtitle {
-            color: #7f8c8d;
+            color: #599678;
             font-size: 14px;
             font-style: italic;
             margin: 0;
-            opacity: 0.8;
+            font-weight: 400;
         }
         
         .session-info {
-            background: #f0f8ff;
-            border: 2px solid #4CAF50;
-            border-radius: 10px;
-            padding: 15px;
+            background: #f8f9fa;
+            border: 2px solid #599678;
+            border-radius: 8px;
+            padding: 20px;
             margin-bottom: 20px;
             text-align: center;
         }
         
         .session-id {
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            color: #2196F3;
-            font-size: 18px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            color: #599678;
+            font-size: 16px;
         }
         
         .timer {
             font-size: 24px;
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: #142435;
             margin: 10px 0;
+            font-family: 'Poppins', sans-serif;
         }
         
         .status {
             font-size: 16px;
             margin: 5px 0;
+            font-family: 'Poppins', sans-serif;
         }
         
-        .status.not-started { color: #666; }
-        .status.in-progress { color: #FF9800; }
-        .status.completed { color: #4CAF50; }
+        .status.not-started { color: #142435; }
+        .status.in-progress { color: #599678; }
+        .status.completed { color: #599678; }
         
         .controls {
             display: flex;
@@ -115,18 +121,25 @@
         }
         
         .btn {
-            background: #4CAF50;
-            color: white;
+            background: #599678;
+            color: #FFFFFF;
             padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 14px;
-            transition: background 0.3s;
+            font-weight: 500;
+            font-family: 'Poppins', sans-serif;
+            transition: background-color 0.2s ease;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
         }
         
         .btn:hover {
-            background: #45a049;
+            background: #4a8067;
         }
         
         .btn:disabled {
@@ -135,30 +148,27 @@
         }
         
         .btn.secondary {
-            background: #2196F3;
+            background: #142435;
         }
         
         .btn.secondary:hover {
-            background: #1976D2;
+            background: #0d1a28;
         }
         
         .btn.danger {
-            background: #f44336;
+            background: #dc3545;
         }
         
         .btn.danger:hover {
-            background: #d32f2f;
+            background: #c82333;
         }
         
         .btn.success {
-            background: #4CAF50;
-            animation: pulse 2s infinite;
+            background: #599678;
         }
         
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+        .btn.success:hover {
+            background: #4a8067;
         }
         
         select {
@@ -176,10 +186,11 @@
         }
         
         .canvas-container {
-            border: 2px solid #333;
-            border-radius: 10px;
-            background: #f9f9f9;
+            border: 2px solid #599678;
+            border-radius: 8px;
+            background: #f8f9fa;
             position: relative;
+            overflow: hidden;
         }
         
         canvas {
@@ -221,7 +232,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(20, 36, 53, 0.9);
             display: none;
             justify-content: center;
             align-items: center;
@@ -229,40 +240,44 @@
         }
         
         .modal-content {
-            background: white;
+            background: #FFFFFF;
             padding: 30px;
-            border-radius: 15px;
+            border-radius: 12px;
             text-align: center;
             max-width: 500px;
             width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: #142435;
+            font-family: 'Poppins', sans-serif;
         }
         
         .completion-time {
             font-size: 32px;
-            font-weight: bold;
-            color: #4CAF50;
+            font-weight: 600;
+            color: #599678;
             margin: 20px 0;
+            font-family: 'Poppins', sans-serif;
         }
         
         .results-code {
-            background: #f5f5f5;
-            border: 2px solid #ddd;
+            background: #f8f9fa;
+            border: 2px solid #599678;
             border-radius: 8px;
             padding: 15px;
-            font-family: 'Courier New', monospace;
+            font-family: 'Poppins', sans-serif;
             white-space: pre-line;
             word-wrap: break-word;
             margin: 20px 0;
             font-size: 14px;
             text-align: left;
             line-height: 1.4;
+            color: #142435;
         }
         
         .progress-bar {
             width: 100%;
             height: 20px;
-            background: #f0f0f0;
+            background: #e9ecef;
             border-radius: 10px;
             overflow: hidden;
             margin: 10px 0;
@@ -270,7 +285,7 @@
         
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #45a049);
+            background: #599678;
             width: 0%;
             transition: width 0.3s ease;
         }
@@ -278,10 +293,11 @@
         .stats {
             display: flex;
             justify-content: space-around;
-            background: #f9f9f9;
-            border-radius: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
             padding: 15px;
             margin: 20px 0;
+            border: 1px solid #e9ecef;
         }
         
         .stat {
@@ -290,32 +306,37 @@
         
         .stat-value {
             font-size: 24px;
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: #599678;
+            font-family: 'Poppins', sans-serif;
         }
         
         .stat-label {
             font-size: 12px;
-            color: #666;
+            color: #142435;
             text-transform: uppercase;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
         }
         
         .footer-branding {
             text-align: center;
             margin-top: 40px;
             padding: 20px 0;
-            border-top: 2px solid rgba(255,255,255,0.2);
-            color: rgba(255,255,255,0.8);
+            border-top: 2px solid #599678;
+            color: #FFFFFF;
         }
         
         .footer-branding p {
             margin: 5px 0;
             font-size: 14px;
+            font-family: 'Poppins', sans-serif;
         }
         
         .footer-contact {
             font-size: 12px !important;
-            opacity: 0.7;
+            opacity: 0.9;
+            color: #FFFFFF;
         }
         
         /* Mobile Responsive Styles */
@@ -645,6 +666,144 @@
                 font-size: 10px;
             }
         }
+        
+        /* Footer Styles */
+        .footer {
+            background: #142435;
+            color: #FFFFFF;
+            padding: 40px 0 20px 0;
+            margin-top: 40px;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+        
+        .footer-section h3 {
+            color: #599678;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #599678;
+            padding-bottom: 8px;
+        }
+        
+        .footer-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .footer-section ul li {
+            margin-bottom: 8px;
+        }
+        
+        .footer-section ul li a {
+            color: #FFFFFF;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-section ul li a:hover {
+            color: #599678;
+        }
+        
+        .footer-contact p {
+            margin: 8px 0;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .footer-contact strong {
+            color: #599678;
+        }
+        
+        .footer-accreditations {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .accreditation-logo {
+            height: 40px;
+            width: auto;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+        
+        .accreditation-logo:hover {
+            opacity: 1;
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .social-link {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #599678;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            color: #FFFFFF;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+            font-size: 18px;
+        }
+        
+        .social-link:hover {
+            background: #4a8067;
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid #444;
+            margin-top: 30px;
+            padding-top: 20px;
+            text-align: center;
+        }
+        
+        .footer-bottom p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        .footer-bottom a {
+            color: #599678;
+            text-decoration: none;
+        }
+        
+        .footer-bottom a:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .footer-accreditations {
+                justify-content: center;
+            }
+            
+            .social-links {
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -693,15 +852,9 @@
             </div>
         </div>
         
-        <div class="controls">
+        <div class="controls" style="justify-content: center;">
             <button class="btn secondary" onclick="resetPuzzle()">
                 🔄 Reset Puzzle
-            </button>
-            <button class="btn danger" onclick="clearProgress()">
-                🗑️ Clear All Progress
-            </button>
-            <button class="btn success" onclick="autoSolve()" style="background: #FF9800;">
-                🧩 Auto-Solve (Testing)
             </button>
         </div>
         
@@ -715,13 +868,9 @@
                 <div class="info">Puzzle Pieces - Drag to solve!</div>
             </div>
         </div>
-        
-        <div class="footer-branding">
-            <p>© 2025 <strong>Tratech Consulting</strong> | Supporting Farnborough FC</p>
-            <p class="footer-contact">🌐 tratechconsulting.co.uk | 📧 info@tratechconsulting.co.uk</p>
-        </div>
     </div>
     
+
     <div class="completion-modal" id="completionModal">
         <div class="modal-content">
             <h2>🎉 Puzzle Completed! 🎉</h2>
@@ -2222,8 +2371,34 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
         
         function resetPuzzle() {
             if (puzzle) {
+                // Store current timer state
+                const wasStarted = puzzle.gameStarted;
+                const currentStartTime = puzzle.startTime;
+                const currentTimerInterval = puzzle.timerInterval;
+                
                 puzzle.shufflePieces();
-                puzzle.resetGame();
+                
+                // Reset only non-timer game state
+                puzzle.gameCompleted = false;
+                puzzle.endTime = null;
+                puzzle.moveCount = 0;
+                puzzle.correctMoves = 0;
+                
+                // Restore timer state if game was already started
+                if (wasStarted && currentStartTime) {
+                    puzzle.gameStarted = true;
+                    puzzle.startTime = currentStartTime;
+                    puzzle.timerInterval = currentTimerInterval;
+                } else {
+                    puzzle.gameStarted = false;
+                    puzzle.startTime = null;
+                    if (puzzle.timerInterval) {
+                        clearInterval(puzzle.timerInterval);
+                        puzzle.timerInterval = null;
+                    }
+                    document.getElementById('timer').textContent = '00:00:00';
+                }
+                
                 puzzle.updateDisplay();
             }
         }
@@ -2516,8 +2691,77 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
                 });
         }
         
+        // Timer pause/resume on window visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (!puzzle) return;
+            
+            if (document.hidden) {
+                // Page is hidden (user switched tabs, minimized window, etc.)
+                if (puzzle.gameStarted && !puzzle.gameCompleted && puzzle.timerInterval) {
+                    puzzle.stopTimer();
+                    puzzle.timerPaused = true;
+                    console.log('Timer paused - page hidden');
+                }
+            } else {
+                // Page is visible again
+                if (puzzle.gameStarted && !puzzle.gameCompleted && puzzle.timerPaused) {
+                    puzzle.startTimer();
+                    puzzle.timerPaused = false;
+                    console.log('Timer resumed - page visible');
+                }
+            }
+        });
+        
+        // Handle page unload (closing tab/window)
+        window.addEventListener('beforeunload', function() {
+            if (puzzle && puzzle.gameStarted && !puzzle.gameCompleted) {
+                puzzle.stopTimer();
+                console.log('Timer stopped - page unloading');
+            }
+        });
+        
         // Start the game when page loads
         window.addEventListener('load', init);
     </script>
+    
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <!-- Contact Information -->
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <div class="footer-contact">
+                    <p><strong>Phone:</strong> 01252 929319</p>
+                    <p><strong>Email:</strong> info@tratechconsulting.co.uk</p>
+                    <p><strong>Address:</strong><br>
+                    Abbey House, 282 Farnborough Rd<br>
+                    Farnborough, GU14 7NA</p>
+                </div>
+            </div>
+            
+            <!-- Accreditations -->
+            <div class="footer-section">
+                <h3>Accreditations & Partners</h3>
+                <div class="footer-accreditations">
+                    <img src="ISOQAR-joint-logo-all-white.webp" alt="ISOQAR Certification" class="accreditation-logo">
+                    <img src="farnborough (1).jpg" alt="Farnborough FC" class="accreditation-logo">
+                </div>
+            </div>
+            
+            <!-- Legal & Navigation -->
+            <div class="footer-section">
+                <h3>Legal & Information</h3>
+                <ul>
+                    <li><a href="#" onclick="return false;">Terms and Conditions</a></li>
+                    <li><a href="#" onclick="return false;">Privacy Policy</a></li>
+                    <li><a href="#" onclick="return false;">Cookie Policy</a></li>
+                    <li><a href="#" onclick="return false;">Modern Slavery Policy</a></li>
+                    <li><a href="#" onclick="return false;">Sitemap</a></li>
+                    <li><a href="#" onclick="return false;">Areas We Cover</a></li>
+                </ul>
+            </div>
+            
+        </div>
+    </footer>
 </body>
 </html>
