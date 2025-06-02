@@ -14,6 +14,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .container {
@@ -471,12 +474,18 @@
             }
             
             canvas {
-                touch-action: none;
+                touch-action: manipulation;
             }
             
             .canvas-container {
                 user-select: none;
                 -webkit-user-select: none;
+                touch-action: manipulation;
+            }
+            
+            /* Ensure body can scroll */
+            body {
+                touch-action: pan-y;
             }
         }
     </style>
@@ -672,13 +681,9 @@
                 this.piecesCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e, 'pieces'), { passive: false });
                 this.puzzleCanvas.addEventListener('touchstart', (e) => this.onTouchStart(e, 'puzzle'), { passive: false });
                 
-                // Global touch events for dragging
+                // Global touch events for dragging - only prevent default when actually dragging
                 document.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
-                document.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
-                
-                // Prevent default touch behavior on canvas containers
-                this.piecesCanvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-                this.puzzleCanvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+                document.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: true });
                 
                 // Auto-save every 5 seconds
                 setInterval(() => this.saveToStorage(), 5000);
@@ -1523,8 +1528,10 @@
             }
             
             onTouchMove(e) {
-                e.preventDefault();
                 if (this.draggedPiece) {
+                    // Only prevent default when actually dragging a piece
+                    e.preventDefault();
+                    
                     // Store global touch position for drop zone highlighting
                     this.draggedPiece.globalX = e.touches[0].clientX;
                     this.draggedPiece.globalY = e.touches[0].clientY;
@@ -1540,11 +1547,12 @@
                     // Throttle rendering during drag to reduce flickering
                     this.render();
                 }
+                // If not dragging, allow normal scrolling
             }
             
             onTouchEnd(e) {
-                e.preventDefault();
                 if (this.draggedPiece) {
+                    e.preventDefault();
                     console.log('Touch end - checking drop');
                     this.checkDrop(e);
                     this.draggedPiece = null;
