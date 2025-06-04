@@ -1183,8 +1183,10 @@
                     const gameState = JSON.parse(saved);
                     
                     // Restore basic state
-                    this.gridSize = gameState.gridSize;
                     this.gameCompleted = gameState.gameCompleted;
+                    
+                    // Difficulty is fixed at 8x8 for competition - override any saved value
+                    this.gridSize = 8;
                     
                     // Reset timer and move tracking on each page load for fresh start
                     this.gameStarted = false;
@@ -1193,10 +1195,17 @@
                     this.moveCount = 0;
                     this.correctMoves = 0;
                     
-                    // Difficulty is fixed at 8 for competition
-                    
                     // Restore image and pieces
                     if (gameState.imageData && gameState.pieces && gameState.pieces.length > 0) {
+                        // Check if saved pieces match expected 8x8 grid (64 pieces)
+                        const expectedPieceCount = this.gridSize * this.gridSize;
+                        
+                        if (gameState.pieces.length !== expectedPieceCount) {
+                            console.log(`Piece count mismatch: saved ${gameState.pieces.length}, expected ${expectedPieceCount}. Recreating puzzle.`);
+                            this.loadDefaultImage();
+                            return;
+                        }
+                        
                         this.image = new Image();
                         this.image.onload = () => {
                             this.pieceWidth = this.canvasSize / this.gridSize;
