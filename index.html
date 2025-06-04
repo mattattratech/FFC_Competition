@@ -994,6 +994,7 @@
                 this.image = null;
                 this.pieces = [];
                 this.gridSize = 8;
+                console.log('🏗️ Constructor set gridSize to:', this.gridSize);
                 this.pieceWidth = 0;
                 this.pieceHeight = 0;
                 this.draggedPiece = null;
@@ -1187,6 +1188,7 @@
                     
                     // Difficulty is fixed at 8x8 for competition - override any saved value
                     this.gridSize = 8;
+                    console.log('🔧 Grid size forced to 8x8 for competition:', this.gridSize);
                     
                     // Reset timer and move tracking on each page load for fresh start
                     this.gameStarted = false;
@@ -2441,6 +2443,14 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
                 this.correctMoves = 0;
                 this.stopTimer();
                 document.getElementById('timer').textContent = '00:00:00';
+            }
+            
+            forceNewPuzzle() {
+                console.log('🔄 Forcing new puzzle - clearing localStorage');
+                localStorage.removeItem('puzzleGameState');
+                this.gridSize = 8;
+                console.log('✅ Grid size reset to:', this.gridSize);
+                this.loadDefaultImage();
             }
             
             captureScreenshot() {
