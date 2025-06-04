@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Farnborough FC Season Ticket Competition - Day 7 | Tratech Consulting</title>
+    <link rel="icon" type="image/png" href="ticket.png">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         
@@ -237,6 +238,8 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
         }
         
         .modal-content {
@@ -246,9 +249,33 @@
             text-align: center;
             max-width: 500px;
             width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             color: #142435;
             font-family: 'Poppins', sans-serif;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Ensure scrollable content is visually clear */
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .modal-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #599678;
+            border-radius: 4px;
+        }
+        
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: #4a7d61;
         }
         
         .completion-time {
@@ -413,12 +440,21 @@
                 font-size: 11px;
             }
             
+            .completion-modal {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 5vh;
+            }
+            
             .modal-content {
                 padding: 20px;
                 width: 95%;
-                margin: 20px;
+                margin: 0;
                 max-height: 90vh;
                 overflow-y: auto;
+                max-width: none;
+                -webkit-overflow-scrolling: touch;
+                position: relative;
             }
             
             .timer {
@@ -470,15 +506,55 @@
                 max-width: calc(100vw - 30px) !important;
             }
             
+            .completion-modal {
+                padding: 5px;
+                align-items: flex-start;
+                padding-top: 3vh;
+            }
+            
             .modal-content {
                 padding: 15px;
-                width: calc(100% - 20px);
+                width: calc(100% - 10px);
                 border-radius: 8px;
-                margin: 10px;
+                margin: 0;
+                max-height: 94vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .completion-time {
                 font-size: 24px;
+            }
+            
+            /* Mobile form improvements */
+            .modal-content input {
+                padding: 12px !important;
+                font-size: 16px !important;
+                border-radius: 8px !important;
+                margin: 8px 0 !important;
+            }
+            
+            .modal-content .btn {
+                padding: 12px 20px !important;
+                font-size: 16px !important;
+                margin: 5px !important;
+                min-height: 48px !important;
+            }
+            
+            .modal-content h2 {
+                font-size: 24px !important;
+                margin: 0 0 15px 0 !important;
+            }
+            
+            .modal-content h3 {
+                font-size: 20px !important;
+                margin: 15px 0 10px 0 !important;
+            }
+            
+            .modal-content p {
+                font-size: 14px !important;
+                line-height: 1.4 !important;
+                margin: 10px 0 !important;
             }
             
             .results-code {
@@ -1126,6 +1202,10 @@
                             this.pieceWidth = this.canvasSize / this.gridSize;
                             this.pieceHeight = this.canvasSize / this.gridSize;
                             this.pieces = gameState.pieces;
+                            
+                            // Validate and adjust piece positions for current canvas size
+                            this.validatePiecePositions();
+                            
                             this.render();
                             this.updateDisplay();
                             
@@ -1301,6 +1381,41 @@
                 console.log(`Grid step: ${this.pieceWidth}px`);
                 
                 this.render();
+            }
+            
+            validatePiecePositions() {
+                if (!this.pieces.length) return;
+                
+                console.log('Validating piece positions for current canvas size...');
+                
+                // Check if any pieces are positioned outside the canvas or have invalid dimensions
+                let needsRepositioning = false;
+                
+                this.pieces.forEach(piece => {
+                    // Check if piece is outside canvas bounds
+                    if (piece.x + this.pieceWidth > this.canvasSize || 
+                        piece.y + this.pieceHeight > this.canvasSize ||
+                        piece.x < 0 || piece.y < 0) {
+                        needsRepositioning = true;
+                        console.warn(`Piece ${piece.id} outside canvas bounds: (${piece.x}, ${piece.y})`);
+                    }
+                    
+                    // Check if piece positions are properly grid-aligned
+                    const expectedX = Math.round(piece.x / this.pieceWidth) * this.pieceWidth;
+                    const expectedY = Math.round(piece.y / this.pieceHeight) * this.pieceHeight;
+                    
+                    if (Math.abs(piece.x - expectedX) > 1 || Math.abs(piece.y - expectedY) > 1) {
+                        piece.x = expectedX;
+                        piece.y = expectedY;
+                        console.log(`Snapped piece ${piece.id} to grid: (${piece.x}, ${piece.y})`);
+                    }
+                });
+                
+                // If pieces are outside bounds, reshuffle them
+                if (needsRepositioning) {
+                    console.log('Pieces found outside canvas bounds - reshuffling...');
+                    this.shufflePieces();
+                }
             }
             
             startTimer() {
