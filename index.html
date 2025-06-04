@@ -1108,12 +1108,14 @@
                     
                     // Restore basic state
                     this.gridSize = gameState.gridSize;
-                    this.gameStarted = gameState.gameStarted;
                     this.gameCompleted = gameState.gameCompleted;
-                    this.startTime = gameState.startTime;
-                    this.endTime = gameState.endTime;
-                    this.moveCount = gameState.moveCount || 0;
-                    this.correctMoves = gameState.correctMoves || 0;
+                    
+                    // Reset timer and move tracking on each page load for fresh start
+                    this.gameStarted = false;
+                    this.startTime = null;
+                    this.endTime = gameState.gameCompleted ? gameState.endTime : null;
+                    this.moveCount = 0;
+                    this.correctMoves = 0;
                     
                     // Difficulty is fixed at 8 for competition
                     
@@ -1127,9 +1129,8 @@
                             this.render();
                             this.updateDisplay();
                             
-                            if (this.gameStarted && !this.gameCompleted) {
-                                this.startTimer();
-                            }
+                            // Timer will start fresh on first move
+                            this.resetTimerDisplay();
                         };
                         this.image.onerror = () => {
                             console.error('Failed to restore saved image, loading default');
@@ -1329,6 +1330,10 @@
                 
                 const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                 document.getElementById('timer').textContent = timeString;
+            }
+            
+            resetTimerDisplay() {
+                document.getElementById('timer').textContent = '00:00:00';
             }
             
             updateDisplay() {
