@@ -3017,12 +3017,16 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             };
             
             // Show loading state
-            const submitButton = form.querySelector('button[type="submit"]');
-            const originalButtonText = submitButton.textContent;
-            submitButton.textContent = 'Submitting...';
-            submitButton.disabled = true;
+            const submitButton = document.querySelector('.quiz-actions .btn.success');
+            const originalButtonText = submitButton ? submitButton.textContent : 'Submit Answers';
+            if (submitButton) {
+                submitButton.textContent = 'Submitting...';
+                submitButton.disabled = true;
+            }
             
             try {
+                console.log('Submitting quiz data:', apiData);
+                
                 // Send POST request to API endpoint
                 const response = await fetch('/api/quiz-answers', {
                     method: 'POST',
@@ -3032,8 +3036,13 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
                     body: JSON.stringify(apiData)
                 });
                 
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('Error response body:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
                 }
                 
                 const result = await response.json();
@@ -3081,8 +3090,10 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
                 
             } finally {
                 // Reset button state
-                submitButton.textContent = originalButtonText;
-                submitButton.disabled = false;
+                if (submitButton) {
+                    submitButton.textContent = originalButtonText;
+                    submitButton.disabled = false;
+                }
             }
         }
         
