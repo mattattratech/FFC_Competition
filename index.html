@@ -1529,7 +1529,7 @@
             
             <div class="thank-you-actions">
                 <button type="button" class="btn success" onclick="closeThankYouModal()">Close</button>
-                <button type="button" class="btn secondary" onclick="redirectToMain()">Back to Main Page</button>
+                <button type="button" class="btn secondary" onclick="redirectToMain()">Visit Tratech Website</button>
             </div>
         </div>
     </div>
@@ -3190,8 +3190,8 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             // Optional: Add any cleanup before redirect
             localStorage.removeItem('puzzleGameState');
             
-            // Refresh the page to restart the experience
-            window.location.reload();
+            // Redirect to Tratech website
+            window.location.href = 'https://tratechconsulting.co.uk';
         }
         
         async function checkForDuplicateEntry(email, name) {
@@ -3230,6 +3230,39 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             
             if (!name || !email || !mobile) {
                 alert('Please fill in your name, email address, and mobile number.');
+                return;
+            }
+            
+            // Validate quiz questions - all questions are required except additional comments
+            const requiredQuestions = [
+                { field: 'question1Part1', label: 'Question 1 - Player Name' },
+                { field: 'question1Part2', label: 'Question 1 - Club Name' },
+                { field: 'question2', label: 'Question 2' },
+                { field: 'question3Part1', label: 'Question 3 - Attendance Figure' },
+                { field: 'question3Part2', label: 'Question 3 - Opposing Team' },
+                { field: 'question4Part1', label: 'Question 4 - Official FA Reason' },
+                { field: 'question4Part2', label: 'Question 4 - Attendance Figure' },
+                { field: 'question5Part1', label: 'Question 5 - Player Name' },
+                { field: 'question5Part2', label: 'Question 5 - Playing Position' },
+                { field: 'recipient1Name', label: 'Question 6 - Recipient 1 Name' },
+                { field: 'recipient1Role', label: 'Question 6 - Recipient 1 Role' },
+                { field: 'recipient2Name', label: 'Question 6 - Recipient 2 Name' },
+                { field: 'recipient2Position', label: 'Question 6 - Recipient 2 Position' },
+                { field: 'question7', label: 'Question 7' }
+            ];
+            
+            const missingQuestions = [];
+            
+            for (const question of requiredQuestions) {
+                const value = formData.get(question.field);
+                if (!value || value.trim() === '') {
+                    missingQuestions.push(question.label);
+                }
+            }
+            
+            if (missingQuestions.length > 0) {
+                const errorMessage = `Please complete the following required questions:\n\n${missingQuestions.map(q => `• ${q}`).join('\n')}`;
+                alert(errorMessage);
                 return;
             }
             
