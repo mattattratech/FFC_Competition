@@ -1811,9 +1811,6 @@
             <button class="btn secondary" onclick="resetPuzzle()">
                 🔄 Reset Puzzle
             </button>
-            <button class="btn" onclick="autoSolve()" style="background: #ff6b35; border-color: #ff6b35; color: white; font-weight: bold;" title="Test/Debug: Instantly complete the puzzle">
-                🧪 Auto-Solve (TEST)
-            </button>
         </div>
         
         <div class="game-area">
@@ -3594,38 +3591,6 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             }
         }
         
-        function autoSolve() {
-            if (!puzzle) return;
-            
-            console.log('🧩 Auto-solving puzzle for testing...');
-            
-            // Start the game if not started
-            if (!puzzle.gameStarted) {
-                puzzle.gameStarted = true;
-                puzzle.startTime = Date.now();
-                puzzle.startTimer();
-            }
-            
-            // Place all pieces in their correct positions
-            puzzle.pieces.forEach(piece => {
-                piece.placed = true;
-                piece.currentRow = piece.correctRow;
-                piece.currentCol = piece.correctCol;
-                piece.x = piece.correctCol * puzzle.pieceWidth;
-                piece.y = piece.correctRow * puzzle.pieceHeight;
-            });
-            
-            // Update move count to simulate some moves
-            puzzle.moveCount = puzzle.pieces.length;
-            puzzle.correctMoves = puzzle.pieces.length; // All moves were "correct"
-            
-            // Trigger completion
-            puzzle.render();
-            puzzle.updateDisplay();
-            puzzle.checkWin();
-            
-            console.log('✅ Puzzle auto-solved! Completion modal should appear.');
-        }
         
         function closeModal() {
             document.getElementById('completionModal').style.display = 'none';
