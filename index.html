@@ -1513,7 +1513,7 @@
         <div class="thank-you-content">
             <div class="thank-you-logos">
                 <div class="logo-container">
-                    <img src="logo-colour-transparent.webp" alt="Tratech Logo" class="thank-you-logo tratech-logo">
+                    <img src="logowithbackground.png" alt="Tratech Logo" class="thank-you-logo tratech-logo">
                 </div>
                 <div class="logo-container">
                     <img src="farnborough (1).jpg" alt="Farnborough FC Logo" class="thank-you-logo ffc-logo">
@@ -3194,6 +3194,31 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             window.location.reload();
         }
         
+        async function checkForDuplicateEntry(email, name) {
+            try {
+                const response = await fetch('/api/quiz-answers/check-duplicate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        participant_email: email, 
+                        participant_name: name 
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Error checking for duplicate entry:', error);
+                throw error;
+            }
+        }
+        
         async function submitQuizForm() {
             const form = document.getElementById('quizSubmissionForm');
             const formData = new FormData(form);
@@ -3206,6 +3231,18 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             if (!name || !email || !mobile) {
                 alert('Please fill in your name, email address, and mobile number.');
                 return;
+            }
+            
+            // Check for duplicate entries
+            try {
+                const duplicateCheck = await checkForDuplicateEntry(email, name);
+                if (duplicateCheck.isDuplicate) {
+                    alert('A submission has already been recorded for this email address or name. Only one entry per person is allowed.');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking for duplicates:', error);
+                // Continue with submission if duplicate check fails to avoid blocking valid submissions
             }
             
             // Prepare data structure to match API endpoint expectations

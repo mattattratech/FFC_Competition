@@ -314,6 +314,57 @@ app.get('/api/scores/export', (req, res) => {
     });
 });
 
+// Check for duplicate quiz submissions
+app.post('/api/quiz-answers/check-duplicate', (req, res) => {
+    console.log('🔍 Received POST /api/quiz-answers/check-duplicate request');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
+    if (!db) {
+        console.error('❌ Database not available');
+        return res.status(503).json({ error: 'Database not available' });
+    }
+    
+    const { participantEmail, participantName } = req.body;
+
+    console.log('🔍 Checking for duplicates...');
+    console.log('participantEmail:', participantEmail);
+    console.log('participantName:', participantName);
+
+    // Validate required fields
+    if (!participantEmail || !participantName) {
+        console.error('❌ Missing required fields for duplicate check');
+        return res.status(400).json({ 
+            error: 'Missing required fields',
+            required: ['participantEmail', 'participantName'],
+            received: req.body
+        });
+    }
+
+    // Check for existing entries with same email or name
+    const sql = `SELECT COUNT(*) as count FROM quiz_answers 
+                 WHERE participant_email = ? OR participant_name = ?`;
+
+    console.log('🔍 Executing duplicate check SQL:', sql);
+    console.log('Parameters:', [participantEmail, participantName]);
+
+    db.get(sql, [participantEmail, participantName], (err, row) => {
+        if (err) {
+            console.error('❌ Database error checking for duplicates:', err.message);
+            res.status(500).json({ error: 'Failed to check for duplicates', details: err.message });
+        } else {
+            const isDuplicate = row.count > 0;
+            console.log(`✅ Duplicate check complete - found ${row.count} existing entries`);
+            console.log('isDuplicate:', isDuplicate);
+            
+            res.json({ 
+                isDuplicate: isDuplicate,
+                existingCount: row.count,
+                message: isDuplicate ? 'Entry already exists for this email or name' : 'No duplicate found'
+            });
+        }
+    });
+});
+
 // Submit quiz answers
 app.post('/api/quiz-answers', (req, res) => {
     console.log('📥 Received POST /api/quiz-answers request');
@@ -524,6 +575,7 @@ app.listen(PORT, () => {
     console.log('  POST /api/scores - Save a new score');
     console.log('  GET /api/leaderboard - Get top scores');
     console.log('  GET /api/scores/export - Export all scores');
+    console.log('  POST /api/quiz-answers/check-duplicate - Check for duplicate quiz submissions');
     console.log('  POST /api/quiz-answers - Submit quiz answers');
     console.log('  GET /api/quiz-answers/export - Export all quiz answers');
     console.log('  GET /api/leaderboard-with-quiz - Get combined leaderboard with quiz data');
