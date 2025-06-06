@@ -609,21 +609,62 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-    console.log('\nShutting down server...');
-    db.close((err) => {
+// Enhanced graceful shutdown for production
+const gracefulShutdown = (signal) => {
+    console.log(`\n${signal} received. Shutting down server gracefully...`);
+    
+    // Stop accepting new connections
+    server.close((err) => {
         if (err) {
-            console.error('Error closing database:', err.message);
-        } else {
-            console.log('Database connection closed');
+            console.error('Error closing server:', err.message);
+            process.exit(1);
         }
-        process.exit(0);
+        
+        console.log('Server closed');
+        
+        // Close database connection
+        if (db) {
+            db.close((err) => {
+                if (err) {
+                    console.error('Error closing database:', err.message);
+                    process.exit(1);
+                } else {
+                    console.log('Database connection closed');
+                    process.exit(0);
+                }
+            });
+        } else {
+            process.exit(0);
+        }
     });
+    
+    // Force close after timeout
+    setTimeout(() => {
+        console.error('Forcefully shutting down after timeout');
+        process.exit(1);
+    }, 10000);
+};
+
+// Handle multiple shutdown signals
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // Railway uses this
+
+// Handle uncaught exceptions and rejections
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
-app.listen(PORT, () => {
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    gracefulShutdown('UNHANDLED_REJECTION');
+});
+
+const server = app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
+    console.log('Environment:', process.env.NODE_ENV || 'development');
+    console.log('Database path:', process.env.NODE_ENV === 'production' ? '/tmp/puzzle_scores.db' : './puzzle_scores.db');
     console.log('API endpoints:');
     console.log('  GET /api/health - Database health check');
     console.log('  POST /api/scores - Save a new score');
@@ -635,4 +676,5 @@ app.listen(PORT, () => {
     console.log('  GET /api/quiz-answers/export - Export all quiz answers');
     console.log('  GET /api/leaderboard-with-quiz - Get combined leaderboard with quiz data');
     console.log('  GET /api/stats - Get statistics');
+    console.log('✅ Server started successfully and ready to accept connections');
 });
