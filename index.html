@@ -1844,13 +1844,15 @@
                     <span id="quizStatusText"></span>
                 </div>
                 
-                <div style="margin: 10px 0;">
-                    <input type="text" id="userName" placeholder="Your Name" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <div style="margin: 10px 0;">
-                    <input type="email" id="userEmail" placeholder="Your Email" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <button class="btn success" onclick="saveScore()" id="saveScoreBtn">💾 Save Score</button>
+                <form id="scoreForm" onsubmit="event.preventDefault(); saveScore();">
+                    <div style="margin: 10px 0;">
+                        <input type="text" id="userName" placeholder="Your Name" required style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <input type="email" id="userEmail" placeholder="Your Email" required style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <button type="submit" class="btn success" id="saveScoreBtn">💾 Save Score</button>
+                </form>
             </div>
             
             <div id="resultsSection" style="display: none;">
@@ -3447,8 +3449,7 @@
                 const resultsCode = this.generateResultsCode(totalTime);
                 document.getElementById('resultsCode').textContent = resultsCode;
                 
-                // Update quiz status indicator
-                updateQuizStatusIndicator();
+                // Quiz status indicator will be updated after score is saved
                 
                 // Trigger orientation manager for completion
                 if (window.orientationManager) {
@@ -4015,6 +4016,10 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             }
             
             alert(successMessage);
+            
+            // Update quiz status indicator after successful save
+            updateQuizStatusIndicator();
+            
             showResultsSection();
         }
         
