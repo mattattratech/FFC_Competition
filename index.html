@@ -3233,6 +3233,13 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
                 return;
             }
             
+            // Validate email format
+            const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+            if (!emailRegex.test(email)) {
+                alert('Please enter a valid email address.');
+                return;
+            }
+            
             // Validate quiz questions - all questions are required except additional comments
             const requiredQuestions = [
                 { field: 'question1Part1', label: 'Question 1 - Player Name' },
@@ -3432,7 +3439,7 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             }
             
             // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
             if (!emailRegex.test(userEmail)) {
                 alert('Please enter a valid email address.');
                 return;
