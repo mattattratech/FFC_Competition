@@ -706,20 +706,24 @@
             }
             
             .quiz-modal {
-                padding: 10px;
+                padding: 5px;
                 align-items: flex-start;
-                padding-top: 5vh;
+                padding-top: 2vh;
+                justify-content: center;
             }
             
             .quiz-modal-content {
-                padding: 20px;
-                width: 95%;
+                padding: 15px;
+                width: calc(100% - 10px);
                 margin: 0;
-                max-height: 90vh;
+                max-height: 95vh;
                 overflow-y: auto;
                 max-width: none;
                 -webkit-overflow-scrolling: touch;
                 position: relative;
+                border-radius: 8px;
+                /* Ensure content is scrollable */
+                overscroll-behavior: contain;
             }
             
             .form-row {
@@ -744,6 +748,52 @@
             .session-id {
                 font-size: 14px;
                 word-break: break-all;
+            }
+        }
+        
+        /* Enhanced mobile portrait mode styles for quiz modal */
+        @media (max-width: 768px) and (orientation: portrait) {
+            .quiz-modal {
+                padding: 3px;
+                align-items: flex-start;
+                padding-top: 1vh;
+            }
+            
+            .quiz-modal-content {
+                padding: 12px;
+                width: calc(100% - 6px);
+                max-height: 98vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+                border-radius: 6px;
+            }
+            
+            .quiz-modal-content h2 {
+                font-size: 18px !important;
+                margin-bottom: 15px !important;
+            }
+            
+            .form-group {
+                margin-bottom: 15px;
+            }
+            
+            .form-group input,
+            .form-group textarea {
+                padding: 10px;
+                font-size: 16px; /* Prevents zoom on iOS */
+                min-height: 44px; /* Touch-friendly minimum */
+            }
+            
+            .quiz-actions {
+                margin-top: 20px;
+                padding-bottom: 10px; /* Extra space at bottom */
+            }
+            
+            .quiz-actions .btn {
+                min-height: 48px; /* Touch-friendly button height */
+                font-size: 16px;
+                padding: 12px 16px;
             }
         }
         
@@ -901,19 +951,22 @@
             
             /* Thank You Modal Mobile Styles */
             .thank-you-modal {
-                padding: 5px;
+                padding: 3px;
                 align-items: flex-start;
-                padding-top: 3vh;
+                padding-top: 2vh;
+                justify-content: center;
             }
             
             .thank-you-content {
-                padding: 20px;
-                width: calc(100% - 10px);
-                border-radius: 8px;
+                padding: 15px;
+                width: calc(100% - 6px);
+                border-radius: 6px;
                 margin: 0;
-                max-height: 94vh;
+                max-height: 96vh;
                 overflow-y: auto;
                 -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+                position: relative;
             }
             
             .thank-you-logos {
@@ -962,6 +1015,69 @@
             }
         }
         
+        /* Enhanced portrait mode styles for thank you modal */
+        @media (max-width: 768px) and (orientation: portrait) {
+            .thank-you-modal {
+                padding: 2px;
+                align-items: flex-start;
+                padding-top: 1vh;
+            }
+            
+            .thank-you-content {
+                padding: 12px;
+                width: calc(100% - 4px);
+                max-height: 98vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+                border-radius: 4px;
+            }
+            
+            .thank-you-message h2 {
+                font-size: 20px !important;
+                margin: 0 0 12px 0 !important;
+            }
+            
+            .main-message {
+                font-size: 14px !important;
+                margin: 10px 0 !important;
+                line-height: 1.4;
+            }
+            
+            .luck-message,
+            .announcement-message {
+                font-size: 13px !important;
+                margin: 10px 0 !important;
+            }
+            
+            .announcement-message {
+                padding: 10px !important;
+            }
+            
+            .thank-you-actions {
+                margin-top: 15px;
+                padding-bottom: 15px; /* Extra space for scroll */
+                gap: 8px;
+            }
+            
+            .thank-you-actions .btn {
+                min-height: 48px !important; /* Touch-friendly height */
+                font-size: 16px !important;
+                padding: 12px 16px !important;
+                margin: 3px 0 !important;
+            }
+            
+            .thank-you-logos {
+                margin-bottom: 15px;
+                gap: 15px;
+            }
+            
+            .thank-you-logo {
+                max-height: 50px !important;
+                max-width: 130px !important;
+            }
+        }
+        
         /* Touch-friendly improvements */
         @media (pointer: coarse) {
             .btn {
@@ -982,6 +1098,63 @@
             /* Ensure body can scroll */
             body {
                 touch-action: pan-y;
+            }
+            
+            .grid-item {
+                min-height: 50px;
+            }
+            
+            .form-group input,
+            .form-group textarea {
+                min-height: 48px;
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+        }
+        
+        /* Additional portrait mode touch improvements */
+        @media (max-width: 768px) and (orientation: portrait) {
+            /* Ensure all interactive elements are touch-friendly */
+            .btn, .grid-item, input, textarea, select {
+                min-height: 44px;
+                touch-action: manipulation;
+            }
+            
+            /* Improve spacing for easier touch targets */
+            .controls {
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+            
+            /* Better scroll behavior for modal content */
+            .quiz-modal-content,
+            .thank-you-content {
+                scroll-padding-bottom: 60px; /* Space for buttons */
+                scroll-behavior: smooth;
+            }
+            
+            /* Prevent modal from being too close to edges */
+            .quiz-modal,
+            .thank-you-modal {
+                padding: 4px;
+                box-sizing: border-box;
+            }
+            
+            /* Ensure form elements are properly spaced */
+            .form-group {
+                margin-bottom: 16px;
+            }
+            
+            .form-group label {
+                margin-bottom: 8px;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+            
+            /* Better button spacing in action areas */
+            .quiz-actions,
+            .thank-you-actions {
+                gap: 12px;
+                margin-top: 24px;
             }
         }
         
@@ -1043,14 +1216,34 @@
             font-weight: bold;
         }
         
-        /* Show orientation message only on mobile/tablet in portrait mode */
+        /* Allow portrait mode - orientation message removed */
         @media screen and (max-width: 1024px) and (orientation: portrait) {
             .orientation-message {
-                display: flex;
+                display: none;
             }
             
             .container {
-                display: none;
+                display: block;
+                padding: 10px;
+            }
+            
+            /* Optimize for portrait mode */
+            body {
+                padding: 5px;
+            }
+            
+            h1 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+            
+            .grid-container {
+                gap: 8px;
+            }
+            
+            .grid-item {
+                min-height: 60px;
+                font-size: 12px;
             }
         }
         
@@ -1379,11 +1572,6 @@
                 <h4>Your Results:</h4>
                 <div class="results-code" id="resultsCode"></div>
                 
-                <div style="margin: 20px 0;">
-                    <button class="btn success" onclick="copyResults()">📋 Copy Results</button>
-                    <button class="btn secondary" onclick="downloadScreenshot()">📷 Download Screenshot</button>
-                    <button class="btn" onclick="shareResults()">📤 Share Results</button>
-                </div>
                 
                 <button class="btn success" onclick="submitQuizAnswers()">📝 Submit Quiz Answers</button>
             </div>
