@@ -365,6 +365,60 @@ app.post('/api/quiz-answers/check-duplicate', (req, res) => {
     });
 });
 
+// Check for duplicate email across both scores and quiz_answers tables
+app.post('/api/check-duplicate-email', (req, res) => {
+    console.log('🔍 Received POST /api/check-duplicate-email request');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
+    if (!db) {
+        console.error('❌ Database not available');
+        return res.status(503).json({ error: 'Database not available' });
+    }
+    
+    const { email } = req.body;
+
+    console.log('🔍 Checking for duplicate email across both tables...');
+    console.log('email:', email);
+
+    // Validate required fields
+    if (!email) {
+        console.error('❌ Missing required email field');
+        return res.status(400).json({ 
+            error: 'Missing required field',
+            required: ['email'],
+            received: req.body
+        });
+    }
+
+    // Check for existing entries with same email in both tables
+    const sql = `SELECT 
+        (SELECT COUNT(*) FROM scores WHERE email = ?) as scores_count,
+        (SELECT COUNT(*) FROM quiz_answers WHERE participant_email = ?) as quiz_count`;
+
+    console.log('🔍 Executing cross-table duplicate check SQL:', sql);
+    console.log('Parameters:', [email, email]);
+
+    db.get(sql, [email, email], (err, row) => {
+        if (err) {
+            console.error('❌ Database error checking for duplicate email:', err.message);
+            res.status(500).json({ error: 'Failed to check for duplicate email', details: err.message });
+        } else {
+            const totalCount = row.scores_count + row.quiz_count;
+            const isDuplicate = totalCount > 0;
+            console.log(`✅ Cross-table duplicate check complete - found ${row.scores_count} in scores, ${row.quiz_count} in quiz_answers`);
+            console.log('isDuplicate:', isDuplicate);
+            
+            res.json({ 
+                isDuplicate: isDuplicate,
+                scoresCount: row.scores_count,
+                quizCount: row.quiz_count,
+                totalCount: totalCount,
+                message: isDuplicate ? 'Email already exists in the system' : 'No duplicate email found'
+            });
+        }
+    });
+});
+
 // Submit quiz answers
 app.post('/api/quiz-answers', (req, res) => {
     console.log('📥 Received POST /api/quiz-answers request');
@@ -576,6 +630,7 @@ app.listen(PORT, () => {
     console.log('  GET /api/leaderboard - Get top scores');
     console.log('  GET /api/scores/export - Export all scores');
     console.log('  POST /api/quiz-answers/check-duplicate - Check for duplicate quiz submissions');
+    console.log('  POST /api/check-duplicate-email - Check for duplicate email across both tables');
     console.log('  POST /api/quiz-answers - Submit quiz answers');
     console.log('  GET /api/quiz-answers/export - Export all quiz answers');
     console.log('  GET /api/leaderboard-with-quiz - Get combined leaderboard with quiz data');

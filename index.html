@@ -3219,6 +3219,30 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             }
         }
         
+        async function checkForDuplicateEmail(email) {
+            try {
+                const response = await fetch('/api/check-duplicate-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        email: email
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Error checking for duplicate email:', error);
+                throw error;
+            }
+        }
+        
         async function submitQuizForm() {
             const form = document.getElementById('quizSubmissionForm');
             const formData = new FormData(form);
@@ -3429,7 +3453,7 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             }
         }
         
-        function saveScore() {
+        async function saveScore() {
             const userName = document.getElementById('userName').value.trim();
             const userEmail = document.getElementById('userEmail').value.trim();
             
@@ -3443,6 +3467,31 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             if (!emailRegex.test(userEmail)) {
                 alert('Please enter a valid email address.');
                 return;
+            }
+            
+            // Check for duplicate email across both scores and quiz_answers tables
+            try {
+                const duplicateCheck = await checkForDuplicateEmail(userEmail);
+                if (duplicateCheck.isDuplicate) {
+                    let errorMessage = 'This email address has already been used in this competition. Only one entry per person is allowed.';
+                    if (duplicateCheck.scoresCount > 0 && duplicateCheck.quizCount > 0) {
+                        errorMessage += '\n\nThis email was found in both the puzzle scores and quiz submissions.';
+                    } else if (duplicateCheck.scoresCount > 0) {
+                        errorMessage += '\n\nThis email was found in the puzzle scores.';
+                    } else if (duplicateCheck.quizCount > 0) {
+                        errorMessage += '\n\nThis email was found in the quiz submissions.';
+                    }
+                    alert(errorMessage);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking for duplicate email:', error);
+                // Continue with submission if duplicate check fails to avoid blocking valid submissions
+                // But show a warning to the user
+                const continueAnyway = confirm('Unable to check for duplicate entries due to a connection issue. Would you like to continue with saving your score anyway?');
+                if (!continueAnyway) {
+                    return;
+                }
             }
             
             // Check for quiz submission status
