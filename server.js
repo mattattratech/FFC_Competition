@@ -10,9 +10,14 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Force HTTPS in production
+// Force HTTPS in production, but allow health checks over HTTP
 if (process.env.NODE_ENV === 'production') {
     app.use((req, res, next) => {
+        // Allow health checks over HTTP for Railway health monitoring
+        if (req.path === '/api/health' || req.path === '/api/ready') {
+            return next();
+        }
+        
         if (req.header('x-forwarded-proto') !== 'https') {
             res.redirect(`https://${req.header('host')}${req.url}`);
         } else {
@@ -25,156 +30,230 @@ app.use(express.static('.')); // Serve static files from current directory
 
 // Initialize SQLite database
 let db;
+let dbReady = false;
+let dbError = null;
 const fs = require('fs');
 
-console.log('🗄️ Initializing database...');
-console.log('Current working directory:', process.cwd());
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('Platform:', process.platform);
-
-// Check if we can write to the current directory
-try {
-    fs.writeFileSync('./test-write.tmp', 'test');
-    fs.unlinkSync('./test-write.tmp');
-    console.log('✅ File system write access confirmed');
-} catch (err) {
-    console.error('❌ Cannot write to file system:', err.message);
-}
-
-try {
-    // Use absolute path for Railway
-    const dbPath = process.env.NODE_ENV === 'production' ? '/tmp/puzzle_scores.db' : './puzzle_scores.db';
-    console.log('📁 Database path:', dbPath);
+// Async database initialization function
+async function initializeDatabase() {
+    console.log('🗄️ Initializing database...');
+    console.log('Current working directory:', process.cwd());
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('Platform:', process.platform);
+    console.log('PORT:', process.env.PORT);
     
-    db = new sqlite3.Database(dbPath, (err) => {
-        if (err) {
-            console.error('❌ Error opening database:', err.message);
-            console.log('🚨 Database functionality will be disabled');
-        } else {
-            console.log('✅ Connected to SQLite database at:', dbPath);
+    // Check if we can write to the current directory
+    try {
+        fs.writeFileSync('./test-write.tmp', 'test');
+        fs.unlinkSync('./test-write.tmp');
+        console.log('✅ File system write access confirmed');
+    } catch (err) {
+        console.error('❌ Cannot write to file system:', err.message);
+    }
+    
+    return new Promise((resolve) => {
+        try {
+            // Use absolute path for Railway
+            const dbPath = process.env.NODE_ENV === 'production' ? '/tmp/puzzle_scores.db' : './puzzle_scores.db';
+            console.log('📁 Database path:', dbPath);
             
-            // Create scores table if it doesn't exist
-            const createTableSQL = `CREATE TABLE IF NOT EXISTS scores (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                completion_time INTEGER NOT NULL,
-                time_string TEXT NOT NULL,
-                difficulty INTEGER NOT NULL,
-                move_count INTEGER NOT NULL,
-                accuracy INTEGER NOT NULL,
-                completed_at TEXT NOT NULL,
-                results_code TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`;
-            
-            // Create quiz_answers table if it doesn't exist
-            const createQuizTableSQL = `CREATE TABLE IF NOT EXISTS quiz_answers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT NOT NULL,
-                participant_name TEXT NOT NULL,
-                participant_email TEXT NOT NULL,
-                participant_mobile TEXT NOT NULL,
-                question1_part1 TEXT,
-                question1_part2 TEXT,
-                question2 TEXT,
-                question3_part1 TEXT,
-                question3_part2 TEXT,
-                question4_part1 TEXT,
-                question4_part2 TEXT,
-                question5_part1 TEXT,
-                question5_part2 TEXT,
-                question6 TEXT,
-                recipient1_name TEXT,
-                recipient1_role TEXT,
-                recipient2_name TEXT,
-                recipient2_position TEXT,
-                question7 TEXT,
-                additional_comments TEXT,
-                submitted_at TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )`;
-            
-            console.log('🔨 Creating scores table...');
-            db.run(createTableSQL, (err) => {
+            db = new sqlite3.Database(dbPath, (err) => {
                 if (err) {
-                    console.error('❌ Error creating scores table:', err.message);
-                    console.error('SQL:', createTableSQL);
+                    console.error('❌ Error opening database:', err.message);
+                    console.log('🚨 Database functionality will be disabled');
+                    dbError = err;
+                    dbReady = false;
+                    resolve(false);
                 } else {
-                    console.log('✅ Scores table ready');
+                    console.log('✅ Connected to SQLite database at:', dbPath);
                     
-                    // Create quiz answers table
-                    console.log('🔨 Creating quiz_answers table...');
-                    db.run(createQuizTableSQL, (err) => {
-                        if (err) {
-                            console.error('❌ Error creating quiz_answers table:', err.message);
-                            console.error('SQL:', createQuizTableSQL);
-                        } else {
-                            console.log('✅ Quiz answers table ready');
-                        }
-                    });
+                    // Create scores table if it doesn't exist
+                    const createTableSQL = `CREATE TABLE IF NOT EXISTS scores (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        completion_time INTEGER NOT NULL,
+                        time_string TEXT NOT NULL,
+                        difficulty INTEGER NOT NULL,
+                        move_count INTEGER NOT NULL,
+                        accuracy INTEGER NOT NULL,
+                        completed_at TEXT NOT NULL,
+                        results_code TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )`;
                     
-                    // Test insert to verify everything works
-                    db.run(`INSERT INTO scores (
-                        session_id, name, email, completion_time, time_string,
-                        difficulty, move_count, accuracy, completed_at, results_code
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
-                        'TEST-SESSION-123', 'Test User', 'test@example.com', 
-                        60000, '01:00:00', 8, 100, 85, new Date().toISOString(),
-                        'TEST-RESULT-CODE'
-                    ], function(err) {
+                    // Create quiz_answers table if it doesn't exist
+                    const createQuizTableSQL = `CREATE TABLE IF NOT EXISTS quiz_answers (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        session_id TEXT NOT NULL,
+                        participant_name TEXT NOT NULL,
+                        participant_email TEXT NOT NULL,
+                        participant_mobile TEXT NOT NULL,
+                        question1_part1 TEXT,
+                        question1_part2 TEXT,
+                        question2 TEXT,
+                        question3_part1 TEXT,
+                        question3_part2 TEXT,
+                        question4_part1 TEXT,
+                        question4_part2 TEXT,
+                        question5_part1 TEXT,
+                        question5_part2 TEXT,
+                        question6 TEXT,
+                        recipient1_name TEXT,
+                        recipient1_role TEXT,
+                        recipient2_name TEXT,
+                        recipient2_position TEXT,
+                        question7 TEXT,
+                        additional_comments TEXT,
+                        submitted_at TEXT NOT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )`;
+                    
+                    console.log('🔨 Creating scores table...');
+                    db.run(createTableSQL, (err) => {
                         if (err) {
-                            console.error('❌ Test insert failed:', err.message);
+                            console.error('❌ Error creating scores table:', err.message);
+                            console.error('SQL:', createTableSQL);
+                            dbError = err;
+                            dbReady = false;
+                            resolve(false);
                         } else {
-                            console.log('✅ Test record inserted with ID:', this.lastID);
-                            // Clean up test record
-                            db.run('DELETE FROM scores WHERE session_id = ?', ['TEST-SESSION-123'], (err) => {
-                                if (!err) console.log('🧹 Test record cleaned up');
+                            console.log('✅ Scores table ready');
+                            
+                            // Create quiz answers table
+                            console.log('🔨 Creating quiz_answers table...');
+                            db.run(createQuizTableSQL, (err) => {
+                                if (err) {
+                                    console.error('❌ Error creating quiz_answers table:', err.message);
+                                    console.error('SQL:', createQuizTableSQL);
+                                    dbError = err;
+                                    dbReady = false;
+                                    resolve(false);
+                                } else {
+                                    console.log('✅ Quiz answers table ready');
+                                    
+                                    // Test insert to verify everything works
+                                    db.run(`INSERT INTO scores (
+                                        session_id, name, email, completion_time, time_string,
+                                        difficulty, move_count, accuracy, completed_at, results_code
+                                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+                                        'TEST-SESSION-123', 'Test User', 'test@example.com', 
+                                        60000, '01:00:00', 8, 100, 85, new Date().toISOString(),
+                                        'TEST-RESULT-CODE'
+                                    ], function(err) {
+                                        if (err) {
+                                            console.error('❌ Test insert failed:', err.message);
+                                            dbError = err;
+                                            dbReady = false;
+                                            resolve(false);
+                                        } else {
+                                            console.log('✅ Test record inserted with ID:', this.lastID);
+                                            // Clean up test record
+                                            db.run('DELETE FROM scores WHERE session_id = ?', ['TEST-SESSION-123'], (err) => {
+                                                if (!err) console.log('🧹 Test record cleaned up');
+                                                dbReady = true;
+                                                dbError = null;
+                                                console.log('✅ Database initialization complete');
+                                                resolve(true);
+                                            });
+                                        }
+                                    });
+                                }
                             });
                         }
                     });
                 }
             });
+        } catch (error) {
+            console.error('❌ Failed to initialize database:', error.message);
+            console.log('🚨 Running without database support');
+            dbError = error;
+            dbReady = false;
+            resolve(false);
         }
     });
-} catch (error) {
-    console.error('❌ Failed to initialize database:', error.message);
-    console.log('🚨 Running without database support');
 }
+
+// Start database initialization (non-blocking)
+initializeDatabase().then((success) => {
+    if (success) {
+        console.log('🎉 Database ready for connections');
+    } else {
+        console.log('⚠️ Continuing without database functionality');
+    }
+});
 
 // API Routes
 
-// Database health check
+// Enhanced health check for Railway deployment
 app.get('/api/health', (req, res) => {
     console.log('🏥 Health check requested');
+    console.log('Database ready:', dbReady);
+    console.log('Database error:', dbError ? dbError.message : 'none');
+    
+    // Always respond with 200 OK to pass Railway health checks
+    // Include database status in response body instead
+    const healthResponse = {
+        status: 'ok',
+        server: 'running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development',
+        port: process.env.PORT || 3001
+    };
     
     if (!db) {
-        return res.json({ 
-            status: 'error', 
-            database: 'not_available',
-            message: 'Database connection failed'
-        });
+        healthResponse.database = {
+            status: 'initializing',
+            ready: false,
+            error: dbError ? dbError.message : 'Connection not established yet'
+        };
+        console.log('⚠️ Health check: database still initializing');
+        return res.json(healthResponse);
     }
     
-    // Test database with a simple count query
+    if (!dbReady) {
+        healthResponse.database = {
+            status: 'not_ready',
+            ready: false,
+            error: dbError ? dbError.message : 'Database initialization in progress'
+        };
+        console.log('⚠️ Health check: database not ready yet');
+        return res.json(healthResponse);
+    }
+    
+    // Test database with a simple count query (with timeout)
+    const queryTimeout = setTimeout(() => {
+        healthResponse.database = {
+            status: 'timeout',
+            ready: false,
+            error: 'Query timeout'
+        };
+        console.log('⚠️ Health check: database query timeout');
+        res.json(healthResponse);
+    }, 5000);
+    
     db.get('SELECT COUNT(*) as count FROM scores', [], (err, row) => {
+        clearTimeout(queryTimeout);
+        
         if (err) {
-            console.error('❌ Health check failed:', err.message);
-            res.json({ 
-                status: 'error', 
-                database: 'error',
+            console.error('❌ Health check database query failed:', err.message);
+            healthResponse.database = {
+                status: 'error',
+                ready: true,
                 error: err.message
-            });
+            };
         } else {
             console.log('✅ Health check passed - scores count:', row.count);
-            res.json({ 
-                status: 'healthy', 
-                database: 'connected',
-                scores_count: row.count,
-                timestamp: new Date().toISOString()
-            });
+            healthResponse.database = {
+                status: 'healthy',
+                ready: true,
+                scores_count: row.count
+            };
         }
+        
+        res.json(healthResponse);
     });
 });
 
@@ -183,9 +262,13 @@ app.post('/api/scores', (req, res) => {
     console.log('📥 Received POST /api/scores request');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    if (!db) {
-        console.error('❌ Database not available');
-        return res.status(503).json({ error: 'Database not available' });
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
     }
     
     const {
@@ -256,9 +339,13 @@ app.post('/api/scores', (req, res) => {
 app.get('/api/leaderboard', (req, res) => {
     console.log('📊 Received GET /api/leaderboard request');
     
-    if (!db) {
-        console.error('❌ Database not available for leaderboard');
-        return res.status(503).json({ error: 'Database not available' });
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for leaderboard');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
     }
     
     const limit = req.query.limit || 10;
@@ -298,6 +385,15 @@ app.get('/api/leaderboard', (req, res) => {
 
 // Get all scores for export
 app.get('/api/scores/export', (req, res) => {
+    if (!db || !dbReady) {
+        console.error('❌ Database not available for scores export');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
+    }
+    
     const sql = `SELECT * FROM scores ORDER BY completed_at DESC`;
     
     db.all(sql, [], (err, rows) => {
@@ -319,9 +415,13 @@ app.post('/api/quiz-answers/check-duplicate', (req, res) => {
     console.log('🔍 Received POST /api/quiz-answers/check-duplicate request');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    if (!db) {
-        console.error('❌ Database not available');
-        return res.status(503).json({ error: 'Database not available' });
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
     }
     
     const { participantEmail, participantName } = req.body;
@@ -370,9 +470,13 @@ app.post('/api/check-duplicate-email', (req, res) => {
     console.log('🔍 Received POST /api/check-duplicate-email request');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    if (!db) {
-        console.error('❌ Database not available');
-        return res.status(503).json({ error: 'Database not available' });
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
     }
     
     const { email } = req.body;
@@ -424,9 +528,13 @@ app.post('/api/quiz-answers', (req, res) => {
     console.log('📥 Received POST /api/quiz-answers request');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
-    if (!db) {
-        console.error('❌ Database not available');
-        return res.status(503).json({ error: 'Database not available' });
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
     }
     
     const {
@@ -513,9 +621,13 @@ app.post('/api/quiz-answers', (req, res) => {
 app.get('/api/quiz-answers/export', (req, res) => {
     console.log('📊 Received GET /api/quiz-answers/export request');
     
-    if (!db) {
-        console.error('❌ Database not available for quiz export');
-        return res.status(503).json({ error: 'Database not available' });
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for quiz export');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
     }
     
     const sql = `SELECT * FROM quiz_answers ORDER BY submitted_at DESC`;
@@ -539,9 +651,13 @@ app.get('/api/quiz-answers/export', (req, res) => {
 app.get('/api/leaderboard-with-quiz', (req, res) => {
     console.log('📊 Received GET /api/leaderboard-with-quiz request');
     
-    if (!db) {
-        console.error('❌ Database not available for combined leaderboard');
-        return res.status(503).json({ error: 'Database not available' });
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for combined leaderboard');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
     }
     
     const limit = req.query.limit || 10;
@@ -585,6 +701,15 @@ app.get('/api/leaderboard-with-quiz', (req, res) => {
 
 // Get statistics
 app.get('/api/stats', (req, res) => {
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for statistics');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
+    }
+    
     const sql = `SELECT 
         COUNT(*) as total_completions,
         AVG(completion_time) as avg_time,
@@ -645,6 +770,27 @@ const gracefulShutdown = (signal) => {
     }, 10000);
 };
 
+// Add readiness endpoint for Railway
+app.get('/api/ready', (req, res) => {
+    const ready = dbReady && db;
+    console.log('🔍 Readiness check:', ready ? 'READY' : 'NOT READY');
+    
+    if (ready) {
+        res.json({ 
+            status: 'ready',
+            database: 'connected',
+            timestamp: new Date().toISOString()
+        });
+    } else {
+        res.status(503).json({
+            status: 'not_ready',
+            database: dbReady ? 'connected' : 'not_ready',
+            error: dbError ? dbError.message : 'Initialization in progress',
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // Handle multiple shutdown signals
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -653,6 +799,7 @@ process.on('SIGUSR2', () => gracefulShutdown('SIGUSR2')); // Railway uses this
 // Handle uncaught exceptions and rejections
 process.on('uncaughtException', (err) => {
     console.error('Uncaught Exception:', err);
+    console.error('Stack trace:', err.stack);
     gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
@@ -661,12 +808,18 @@ process.on('unhandledRejection', (reason, promise) => {
     gracefulShutdown('UNHANDLED_REJECTION');
 });
 
-const server = app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-    console.log('Environment:', process.env.NODE_ENV || 'development');
-    console.log('Database path:', process.env.NODE_ENV === 'production' ? '/tmp/puzzle_scores.db' : './puzzle_scores.db');
-    console.log('API endpoints:');
-    console.log('  GET /api/health - Database health check');
+// Start server with improved startup logging
+const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log('🚀 =================================');
+    console.log('🚀 SERVER STARTUP COMPLETE');
+    console.log('🚀 =================================');
+    console.log(`🌐 Server running on: http://0.0.0.0:${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🗄️ Database path: ${process.env.NODE_ENV === 'production' ? '/tmp/puzzle_scores.db' : './puzzle_scores.db'}`);
+    console.log(`📊 Database ready: ${dbReady}`);
+    console.log(`⚡ Uptime: ${process.uptime().toFixed(2)}s`);
+    console.log('📡 API endpoints:');
+    console.log('  GET /api/health - Enhanced health check');
     console.log('  POST /api/scores - Save a new score');
     console.log('  GET /api/leaderboard - Get top scores');
     console.log('  GET /api/scores/export - Export all scores');
@@ -676,5 +829,8 @@ const server = app.listen(PORT, () => {
     console.log('  GET /api/quiz-answers/export - Export all quiz answers');
     console.log('  GET /api/leaderboard-with-quiz - Get combined leaderboard with quiz data');
     console.log('  GET /api/stats - Get statistics');
-    console.log('✅ Server started successfully and ready to accept connections');
+    console.log('🚀 =================================');
+    console.log('✅ Server ready to accept connections');
+    console.log('🔗 Health check: http://0.0.0.0:' + PORT + '/api/health');
+    console.log('🚀 =================================');
 });
