@@ -301,6 +301,144 @@
             color: #142435;
         }
         
+        /* Quiz Submission Modal Styles */
+        .quiz-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(20, 36, 53, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .quiz-modal-content {
+            background: #FFFFFF;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            color: #142435;
+            font-family: 'Poppins', sans-serif;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .quiz-modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .quiz-modal-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .quiz-modal-content::-webkit-scrollbar-thumb {
+            background: #599678;
+            border-radius: 4px;
+        }
+        
+        .quiz-modal-content::-webkit-scrollbar-thumb:hover {
+            background: #4a7d61;
+        }
+        
+        .quiz-form {
+            text-align: left;
+        }
+        
+        .quiz-form h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #142435;
+            font-size: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #142435;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #599678;
+        }
+        
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        .quiz-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .quiz-actions .btn {
+            min-width: 120px;
+        }
+        
+        .user-info-display {
+            background: #f8f9fa;
+            border: 2px solid #599678;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .user-info-display h3 {
+            margin: 0 0 10px 0;
+            color: #599678;
+            font-size: 16px;
+        }
+        
+        .user-info-display p {
+            margin: 5px 0;
+            color: #142435;
+            font-size: 14px;
+        }
+        
         .progress-bar {
             width: 100%;
             height: 20px;
@@ -457,6 +595,38 @@
                 position: relative;
             }
             
+            .quiz-modal {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 5vh;
+            }
+            
+            .quiz-modal-content {
+                padding: 20px;
+                width: 95%;
+                margin: 0;
+                max-height: 90vh;
+                overflow-y: auto;
+                max-width: none;
+                -webkit-overflow-scrolling: touch;
+                position: relative;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .quiz-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .quiz-actions .btn {
+                width: 100%;
+                min-width: auto;
+            }
+            
             .timer {
                 font-size: 20px;
             }
@@ -555,6 +725,63 @@
                 font-size: 14px !important;
                 line-height: 1.4 !important;
                 margin: 10px 0 !important;
+            }
+            
+            .quiz-modal {
+                padding: 5px;
+                align-items: flex-start;
+                padding-top: 3vh;
+            }
+            
+            .quiz-modal-content {
+                padding: 15px;
+                width: calc(100% - 10px);
+                border-radius: 8px;
+                margin: 0;
+                max-height: 94vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .quiz-modal-content input,
+            .quiz-modal-content textarea {
+                padding: 12px !important;
+                font-size: 16px !important;
+                border-radius: 8px !important;
+                margin: 8px 0 !important;
+            }
+            
+            .quiz-modal-content .btn {
+                padding: 12px 20px !important;
+                font-size: 16px !important;
+                margin: 5px !important;
+                min-height: 48px !important;
+                width: 100% !important;
+            }
+            
+            .quiz-modal-content h2 {
+                font-size: 20px !important;
+                margin: 0 0 15px 0 !important;
+            }
+            
+            .quiz-modal-content label {
+                font-size: 14px !important;
+                margin-bottom: 8px !important;
+            }
+            
+            .user-info-display {
+                padding: 12px !important;
+                margin-bottom: 20px !important;
+            }
+            
+            .user-info-display h3 {
+                font-size: 16px !important;
+                margin: 0 0 8px 0 !important;
+            }
+            
+            .user-info-display p {
+                font-size: 13px !important;
+                margin: 3px 0 !important;
             }
             
             .results-code {
@@ -956,6 +1183,12 @@
             <div id="userInfoForm" style="margin: 20px 0;">
                 <h3>Save Your Score!</h3>
                 <p>Enter your details to save this completion to the leaderboard:</p>
+                
+                <!-- Quiz submission status indicator -->
+                <div id="quizStatusIndicator" style="margin: 15px 0; padding: 10px; border-radius: 5px; display: none;">
+                    <span id="quizStatusText"></span>
+                </div>
+                
                 <div style="margin: 10px 0;">
                     <input type="text" id="userName" placeholder="Your Name" style="width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 5px;">
                 </div>
@@ -978,6 +1211,125 @@
                 </div>
                 
                 <button class="btn success" onclick="submitQuizAnswers()">📝 Submit Quiz Answers</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Submission Modal -->
+    <div class="quiz-modal" id="quizModal">
+        <div class="quiz-modal-content">
+            <div class="quiz-form">
+                <h2>📝 Submit Your Competition Answers</h2>
+                
+                <div class="user-info-display" id="userInfoDisplay">
+                    <h3>Submission Details</h3>
+                    <p><strong>Name:</strong> <span id="displayName">Not saved</span></p>
+                    <p><strong>Email:</strong> <span id="displayEmail">Not saved</span></p>
+                    <p><strong>Completion Time:</strong> <span id="displayTime">N/A</span></p>
+                </div>
+                
+                <form id="quizSubmissionForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="participantName">Your Name *</label>
+                            <input type="text" id="participantName" name="participantName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="participantEmail">Your Email *</label>
+                            <input type="email" id="participantEmail" name="participantEmail" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="participantMobile">Your Mobile Number *</label>
+                        <input type="tel" id="participantMobile" name="participantMobile" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question1Part1">Question 1, Part 1 - Which player scored the winning FA Cup goal against Darlington in 2002/03?</label>
+                        <textarea id="question1Part1" name="question1Part1" placeholder="Enter the player's name"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question1Part2">Question 1, Part 2 - And which club did he play for prior to signing with Boro</label>
+                        <textarea id="question1Part2" name="question1Part2" placeholder="Enter the club name"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question2">Question 2 - What was the company name of the newly incorporated Farnborough FC</label>
+                        <textarea id="question2" name="question2" placeholder="Enter the company name"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question3Part1">Question 3, Part 1 - What is the record attendance at Cherrywood Road?</label>
+                        <textarea id="question3Part1" name="question3Part1" placeholder="Enter the attendance figure"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question3Part2">Question 3, Part 2 - And who was the match against?</label>
+                        <textarea id="question3Part2" name="question3Part2" placeholder="Enter the opposing team"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question4Part1">Question 4, Part 1 - What was the official FA reason for the reversal of the FA Cup game against Arsenal?</label>
+                        <textarea id="question4Part1" name="question4Part1" placeholder="Enter the official FA reason"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question4Part2">Question 4, Part 2 - And what was the official attendance?</label>
+                        <textarea id="question4Part2" name="question4Part2" placeholder="Enter the attendance figure"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question5Part1">Question 5, Part 1 - What was the name of the player who was named in the 2022/23 National League South team of the season?</label>
+                        <textarea id="question5Part1" name="question5Part1" placeholder="Enter the player's name"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question5Part2">Question 5, Part 2 - And what position did he play?</label>
+                        <textarea id="question5Part2" name="question5Part2" placeholder="Enter the playing position"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question6">Question 6 - Who were the recipients of the monthly league accolades in March 2024 and what was their roles/position?</label>
+                        <textarea id="question6" name="question6" placeholder="Enter details about the recipients"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recipient1Name">Recipient 1 Name</label>
+                        <textarea id="recipient1Name" name="recipient1Name" placeholder="Enter recipient 1's name"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recipient1Role">Recipient 1 Role</label>
+                        <textarea id="recipient1Role" name="recipient1Role" placeholder="Enter recipient 1's role"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recipient2Name">Recipient 2 Name</label>
+                        <textarea id="recipient2Name" name="recipient2Name" placeholder="Enter recipient 2's name"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recipient2Position">Recipient 2 Position</label>
+                        <textarea id="recipient2Position" name="recipient2Position" placeholder="Enter recipient 2's position"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="question7">Question 7 - What is the name of the player you uncovered in the jigsaw?</label>
+                        <textarea id="question7" name="question7" placeholder="Enter the player's name from the puzzle"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="additionalComments">Additional Comments (Optional)</label>
+                        <textarea id="additionalComments" name="additionalComments" placeholder="Any additional comments or feedback"></textarea>
+                    </div>
+                </form>
+                
+                <div class="quiz-actions">
+                    <button type="button" class="btn secondary" onclick="closeQuizModal()">Cancel</button>
+                    <button type="button" class="btn success" onclick="submitQuizForm()">📤 Submit Answers</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1143,6 +1495,13 @@
                 
                 // Auto-save every 5 seconds
                 setInterval(() => this.saveToStorage(), 5000);
+                
+                // Modal click-outside-to-close functionality
+                document.getElementById('quizModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'quizModal') {
+                        closeQuizModal();
+                    }
+                });
             }
             
             saveToStorage() {
@@ -2413,6 +2772,9 @@
                 const resultsCode = this.generateResultsCode(totalTime);
                 document.getElementById('resultsCode').textContent = resultsCode;
                 
+                // Update quiz status indicator
+                updateQuizStatusIndicator();
+                
                 document.getElementById('completionModal').style.display = 'flex';
             }
             
@@ -2589,14 +2951,140 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
         }
         
         function submitQuizAnswers() {
-            // TODO: Replace with actual quiz submission URL
-            const quizUrl = 'https://example.com/quiz-submission'; // PLACEHOLDER - Replace with actual URL
+            // Show the quiz submission modal
+            showQuizModal();
+        }
+        
+        function showQuizModal() {
+            // Pre-populate user info if available
+            const userName = document.getElementById('userName').value;
+            const userEmail = document.getElementById('userEmail').value;
+            const finalTime = document.getElementById('finalTime').textContent;
             
-            // Open quiz submission page in new window/tab
-            window.open(quizUrl, '_blank');
+            // Update display info
+            document.getElementById('displayName').textContent = userName || 'Not saved';
+            document.getElementById('displayEmail').textContent = userEmail || 'Not saved';
+            document.getElementById('displayTime').textContent = finalTime || 'N/A';
             
-            // Optionally close the modal after opening the quiz
-            closeModal();
+            // Pre-populate form fields with saved user info
+            document.getElementById('participantName').value = userName || '';
+            document.getElementById('participantEmail').value = userEmail || '';
+            
+            // Show the modal
+            document.getElementById('quizModal').style.display = 'flex';
+        }
+        
+        function closeQuizModal() {
+            document.getElementById('quizModal').style.display = 'none';
+        }
+        
+        async function submitQuizForm() {
+            const form = document.getElementById('quizSubmissionForm');
+            const formData = new FormData(form);
+            
+            // Validate required fields
+            const name = formData.get('participantName');
+            const email = formData.get('participantEmail');
+            const mobile = formData.get('participantMobile');
+            
+            if (!name || !email || !mobile) {
+                alert('Please fill in your name, email address, and mobile number.');
+                return;
+            }
+            
+            // Prepare data structure to match API endpoint expectations
+            const apiData = {
+                sessionId: puzzle.sessionId,
+                participantName: name,
+                participantEmail: email,
+                participantMobile: mobile,
+                question1Part1: formData.get('question1Part1') || '',
+                question1Part2: formData.get('question1Part2') || '',
+                question2: formData.get('question2') || '',
+                question3Part1: formData.get('question3Part1') || '',
+                question3Part2: formData.get('question3Part2') || '',
+                question4Part1: formData.get('question4Part1') || '',
+                question4Part2: formData.get('question4Part2') || '',
+                question5Part1: formData.get('question5Part1') || '',
+                question5Part2: formData.get('question5Part2') || '',
+                question6: formData.get('question6') || '',
+                recipient1Name: formData.get('recipient1Name') || '',
+                recipient1Role: formData.get('recipient1Role') || '',
+                recipient2Name: formData.get('recipient2Name') || '',
+                recipient2Position: formData.get('recipient2Position') || '',
+                question7: formData.get('question7') || '',
+                additionalComments: formData.get('additionalComments') || '',
+                submittedAt: new Date().toISOString()
+            };
+            
+            // Show loading state
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.textContent;
+            submitButton.textContent = 'Submitting...';
+            submitButton.disabled = true;
+            
+            try {
+                // Send POST request to API endpoint
+                const response = await fetch('/api/quiz-answers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(apiData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Quiz submission successful:', result);
+                
+                // Save to localStorage as backup
+                const backupData = {
+                    ...apiData,
+                    completionTime: document.getElementById('displayTime').textContent,
+                    submissionDate: new Date().toISOString(),
+                    apiResponse: result
+                };
+                localStorage.setItem('quizSubmission', JSON.stringify(backupData));
+                
+                // Update quiz status indicator if visible
+                updateQuizStatusIndicator();
+                
+                // Show success message
+                alert('Thank you! Your competition answers have been submitted successfully. You should receive a confirmation email shortly.');
+                
+                // Close the modal
+                closeQuizModal();
+                
+                // Optionally close the completion modal too
+                closeModal();
+                
+            } catch (error) {
+                console.error('Error submitting quiz:', error);
+                
+                // Save to localStorage as fallback
+                const fallbackData = {
+                    ...apiData,
+                    completionTime: document.getElementById('displayTime').textContent,
+                    submissionDate: new Date().toISOString(),
+                    error: error.message,
+                    fallbackSubmission: true
+                };
+                localStorage.setItem('quizSubmission', JSON.stringify(fallbackData));
+                
+                // Update quiz status indicator if visible
+                updateQuizStatusIndicator();
+                
+                // Show error message with fallback information
+                alert('There was an issue submitting your answers to the server, but they have been saved locally as a backup. Please contact support with your session ID: ' + puzzle.sessionId);
+                
+            } finally {
+                // Reset button state
+                submitButton.textContent = originalButtonText;
+                submitButton.disabled = false;
+            }
         }
         
         function copyResults() {
@@ -2655,6 +3143,17 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
                 return;
             }
             
+            // Check for quiz submission status
+            let quizSubmissionData = null;
+            try {
+                const quizData = localStorage.getItem('quizSubmission');
+                if (quizData) {
+                    quizSubmissionData = JSON.parse(quizData);
+                }
+            } catch (e) {
+                console.warn('Error parsing quiz submission data:', e);
+            }
+            
             // Create score entry
             const scoreEntry = {
                 sessionId: puzzle.sessionId,
@@ -2666,19 +3165,65 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
                 moveCount: puzzle.moveCount,
                 accuracy: Math.round((puzzle.correctMoves / puzzle.moveCount) * 100),
                 completedAt: new Date().toISOString(),
-                resultsCode: puzzle.generateResultsCode(puzzle.endTime - puzzle.startTime)
+                resultsCode: puzzle.generateResultsCode(puzzle.endTime - puzzle.startTime),
+                // Quiz submission status information
+                quizSubmitted: quizSubmissionData ? true : false,
+                quizSubmissionDate: quizSubmissionData ? quizSubmissionData.submissionDate : null,
+                quizFallbackSubmission: quizSubmissionData ? quizSubmissionData.fallbackSubmission || false : false
             };
             
             // Save to localStorage database
             saveToDatabase(scoreEntry);
             
-            // Show success message and proceed to results
-            alert(`Score saved successfully! Thank you ${userName}!`);
+            // Show success message based on quiz submission status
+            let successMessage = `Score saved successfully! Thank you ${userName}!`;
+            if (quizSubmissionData) {
+                successMessage += '\n\nNote: Quiz answers have been submitted for this session.';
+            } else {
+                successMessage += '\n\nReminder: Don\'t forget to submit your quiz answers after viewing your results!';
+            }
+            
+            alert(successMessage);
             showResultsSection();
         }
         
         function skipSaving() {
             showResultsSection();
+        }
+        
+        function updateQuizStatusIndicator() {
+            const indicator = document.getElementById('quizStatusIndicator');
+            const statusText = document.getElementById('quizStatusText');
+            
+            try {
+                const quizData = localStorage.getItem('quizSubmission');
+                
+                if (quizData) {
+                    const submissionData = JSON.parse(quizData);
+                    indicator.style.display = 'block';
+                    indicator.style.backgroundColor = '#d4edda';
+                    indicator.style.border = '1px solid #c3e6cb';
+                    indicator.style.color = '#155724';
+                    
+                    const submissionDate = new Date(submissionData.submissionDate);
+                    const dateString = submissionDate.toLocaleDateString() + ' ' + submissionDate.toLocaleTimeString();
+                    
+                    if (submissionData.fallbackSubmission) {
+                        statusText.innerHTML = `✅ Quiz answers submitted locally on ${dateString}<br><small>Note: Submitted offline - will sync when server is available</small>`;
+                    } else {
+                        statusText.innerHTML = `✅ Quiz answers successfully submitted on ${dateString}`;
+                    }
+                } else {
+                    indicator.style.display = 'block';
+                    indicator.style.backgroundColor = '#fff3cd';
+                    indicator.style.border = '1px solid #ffeaa7';
+                    indicator.style.color = '#856404';
+                    statusText.innerHTML = `⏳ Quiz answers not yet submitted<br><small>Remember to submit your quiz answers after saving your score!</small>`;
+                }
+            } catch (e) {
+                console.warn('Error checking quiz submission status:', e);
+                indicator.style.display = 'none';
+            }
         }
         
         function showResultsSection() {
