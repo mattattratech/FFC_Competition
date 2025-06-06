@@ -184,6 +184,39 @@ initializeDatabase().then((success) => {
     }
 });
 
+
+// Function to format quiz answers with simple field names for Excel export
+function formatQuizAnswers(rawAnswers) {
+    const formatted = {};
+    
+    // Add participant information
+    formatted.participant_info = {
+        name: rawAnswers.participant_name,
+        email: rawAnswers.participant_email,
+        mobile: rawAnswers.participant_mobile,
+        submitted_at: rawAnswers.submitted_at
+    };
+    
+    // Format quiz questions and answers with simple field names
+    formatted.quiz_responses = {};
+    
+    // Define the simple field mappings for Excel-friendly column headers
+    const simpleFields = [
+        'question1_part1', 'question1_part2', 'question2', 'question3_part1', 'question3_part2',
+        'question4_part1', 'question4_part2', 'question5_part1', 'question5_part2', 'question6',
+        'recipient1_name', 'recipient1_role', 'recipient2_name', 'recipient2_position',
+        'question7', 'additional_comments'
+    ];
+    
+    simpleFields.forEach(fieldName => {
+        if (rawAnswers[fieldName] !== null && rawAnswers[fieldName] !== undefined) {
+            formatted.quiz_responses[fieldName] = rawAnswers[fieldName];
+        }
+    });
+    
+    return formatted;
+}
+
 // API Routes
 
 // Enhanced health check for Railway deployment
@@ -630,6 +663,7 @@ app.get('/api/quiz-answers/export', (req, res) => {
         });
     }
     
+    const format = req.query.format || 'formatted'; // Default to formatted, allow 'raw' for backward compatibility
     const sql = `SELECT * FROM quiz_answers ORDER BY submitted_at DESC`;
     
     db.all(sql, [], (err, rows) => {
@@ -638,11 +672,32 @@ app.get('/api/quiz-answers/export', (req, res) => {
             res.status(500).json({ error: 'Failed to export quiz answers' });
         } else {
             console.log(`✅ Exported ${rows.length} quiz submissions`);
-            res.json({
-                total: rows.length,
-                exported_at: new Date().toISOString(),
-                quiz_answers: rows
-            });
+            
+            if (format === 'raw') {
+                // Return raw data for backward compatibility
+                res.json({
+                    total: rows.length,
+                    exported_at: new Date().toISOString(),
+                    format: 'raw',
+                    quiz_answers: rows
+                });
+            } else {
+                // Return formatted data with readable question labels
+                const formattedAnswers = rows.map(row => {
+                    const formatted = formatQuizAnswers(row);
+                    formatted.id = row.id;
+                    formatted.session_id = row.session_id;
+                    formatted.created_at = row.created_at;
+                    return formatted;
+                });
+                
+                res.json({
+                    total: rows.length,
+                    exported_at: new Date().toISOString(),
+                    format: 'formatted',
+                    quiz_answers: formattedAnswers
+                });
+            }
         }
     });
 });
@@ -662,6 +717,7 @@ app.get('/api/leaderboard-with-quiz', (req, res) => {
     
     const limit = req.query.limit || 10;
     const difficulty = req.query.difficulty;
+    const format = req.query.format || 'formatted'; // Default to formatted, allow 'raw' for backward compatibility
     
     let sql = `SELECT 
         s.id, s.session_id, s.name, s.email, s.completion_time, s.time_string, 
@@ -694,7 +750,152 @@ app.get('/api/leaderboard-with-quiz', (req, res) => {
             res.status(500).json({ error: 'Failed to fetch combined leaderboard' });
         } else {
             console.log(`✅ Found ${rows.length} combined leaderboard entries`);
-            res.json(rows);
+            
+            if (format === 'raw') {
+                // Return raw data for backward compatibility
+                res.json(rows);
+            } else {
+                // Return formatted data with readable question labels
+                const formattedRows = rows.map(row => {
+                    const result = {
+                        // Puzzle game information
+                        puzzle_game: {
+                            id: row.id,
+                            session_id: row.session_id,
+                            name: row.name,
+                            email: row.email,
+                            completion_time: row.completion_time,
+                            time_string: row.time_string,
+                            difficulty: row.difficulty,
+                            move_count: row.move_count,
+                            accuracy: row.accuracy,
+                            completed_at: row.completed_at
+                        }
+                    };
+                    
+                    // Quiz information (if available)
+                    if (row.quiz_name) {
+                        const quizData = {
+                            participant_name: row.quiz_name,
+                            participant_email: row.quiz_email,
+                            participant_mobile: row.participant_mobile,
+                            submitted_at: row.quiz_submitted_at,
+                            question1_part1: row.question1_part1,
+                            question1_part2: row.question1_part2,
+                            question2: row.question2,
+                            question3_part1: row.question3_part1,
+                            question3_part2: row.question3_part2,
+                            question4_part1: row.question4_part1,
+                            question4_part2: row.question4_part2,
+                            question5_part1: row.question5_part1,
+                            question5_part2: row.question5_part2,
+                            question6: row.question6,
+                            recipient1_name: row.recipient1_name,
+                            recipient1_role: row.recipient1_role,
+                            recipient2_name: row.recipient2_name,
+                            recipient2_position: row.recipient2_position,
+                            question7: row.question7,
+                            additional_comments: row.additional_comments
+                        };
+                        
+                        result.quiz_answers = formatQuizAnswers(quizData);
+                    } else {
+                        result.quiz_answers = null;
+                    }
+                    
+                    return result;
+                });
+                
+                res.json(formattedRows);
+            }
+        }
+    });
+});
+
+// Get formatted quiz answers (dedicated endpoint for better quiz data viewing)
+app.get('/api/quiz-answers/formatted', (req, res) => {
+    console.log('📊 Received GET /api/quiz-answers/formatted request');
+    
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for formatted quiz data');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
+    }
+    
+    const limit = req.query.limit || 50; // Default to 50 for this detailed view
+    const offset = req.query.offset || 0;
+    const search = req.query.search; // Optional search term for participant name or email
+    
+    let sql = `SELECT * FROM quiz_answers`;
+    let params = [];
+    
+    if (search) {
+        sql += ` WHERE participant_name LIKE ? OR participant_email LIKE ?`;
+        const searchParam = `%${search}%`;
+        params.push(searchParam, searchParam);
+    }
+    
+    sql += ` ORDER BY submitted_at DESC LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
+    
+    console.log('🔍 Executing formatted quiz SQL:', sql);
+    console.log('Parameters:', params);
+    
+    db.all(sql, params, (err, rows) => {
+        if (err) {
+            console.error('❌ Error fetching formatted quiz answers:', err.message);
+            res.status(500).json({ error: 'Failed to fetch formatted quiz answers' });
+        } else {
+            console.log(`✅ Found ${rows.length} formatted quiz entries`);
+            
+            const formattedAnswers = rows.map(row => {
+                const formatted = formatQuizAnswers(row);
+                formatted.id = row.id;
+                formatted.session_id = row.session_id;
+                formatted.created_at = row.created_at;
+                return formatted;
+            });
+            
+            // Get total count for pagination
+            let countSql = `SELECT COUNT(*) as total FROM quiz_answers`;
+            let countParams = [];
+            
+            if (search) {
+                countSql += ` WHERE participant_name LIKE ? OR participant_email LIKE ?`;
+                const searchParam = `%${search}%`;
+                countParams.push(searchParam, searchParam);
+            }
+            
+            db.get(countSql, countParams, (countErr, countRow) => {
+                if (countErr) {
+                    console.error('❌ Error getting count:', countErr.message);
+                    // Still return the data even if count fails
+                    res.json({
+                        quiz_answers: formattedAnswers,
+                        pagination: {
+                            limit: parseInt(limit),
+                            offset: parseInt(offset),
+                            returned: formattedAnswers.length
+                        },
+                        retrieved_at: new Date().toISOString()
+                    });
+                } else {
+                    res.json({
+                        quiz_answers: formattedAnswers,
+                        pagination: {
+                            limit: parseInt(limit),
+                            offset: parseInt(offset),
+                            total: countRow.total,
+                            returned: formattedAnswers.length,
+                            has_more: (parseInt(offset) + formattedAnswers.length) < countRow.total
+                        },
+                        retrieved_at: new Date().toISOString()
+                    });
+                }
+            });
         }
     });
 });
@@ -826,8 +1027,9 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log('  POST /api/quiz-answers/check-duplicate - Check for duplicate quiz submissions');
     console.log('  POST /api/check-duplicate-email - Check for duplicate email across both tables');
     console.log('  POST /api/quiz-answers - Submit quiz answers');
-    console.log('  GET /api/quiz-answers/export - Export all quiz answers');
-    console.log('  GET /api/leaderboard-with-quiz - Get combined leaderboard with quiz data');
+    console.log('  GET /api/quiz-answers/export - Export all quiz answers (supports ?format=raw|formatted)');
+    console.log('  GET /api/quiz-answers/formatted - Dedicated formatted quiz data viewer with pagination');
+    console.log('  GET /api/leaderboard-with-quiz - Get combined leaderboard with quiz data (supports ?format=raw|formatted)');
     console.log('  GET /api/stats - Get statistics');
     console.log('🚀 =================================');
     console.log('✅ Server ready to accept connections');
