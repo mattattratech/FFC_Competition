@@ -2,13 +2,60 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const cors = require('cors');
+const xlsx = require('xlsx');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Authentication configuration
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'ffc-admin-2024-secure-token-' + crypto.randomBytes(16).toString('hex');
+
+// Log the admin token on startup for development (only if default is used)
+if (!process.env.ADMIN_TOKEN) {
+    console.log('⚠️  ADMIN_TOKEN not set in environment variables');
+    console.log('🔑 Generated admin token for this session:', ADMIN_TOKEN);
+    console.log('💡 Set ADMIN_TOKEN environment variable for production');
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Authentication middleware
+const authenticateAdmin = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = req.headers['x-admin-token'] || req.query.token;
+    
+    // Check for Bearer token or custom header or query parameter
+    let providedToken = null;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        providedToken = authHeader.substring(7);
+    } else if (token) {
+        providedToken = token;
+    }
+    
+    if (!providedToken) {
+        console.log('🚫 Authentication failed: No token provided');
+        return res.status(401).json({
+            error: 'Authentication required',
+            message: 'Access denied. Admin authentication required for this endpoint.',
+            hint: 'Provide token via Authorization: Bearer <token>, X-Admin-Token header, or ?token= query parameter'
+        });
+    }
+    
+    if (providedToken !== ADMIN_TOKEN) {
+        console.log('🚫 Authentication failed: Invalid token');
+        return res.status(401).json({
+            error: 'Invalid authentication',
+            message: 'Access denied. Invalid admin token provided.'
+        });
+    }
+    
+    console.log('✅ Admin authentication successful');
+    next();
+};
 
 // Force HTTPS in production, but allow health checks over HTTP
 if (process.env.NODE_ENV === 'production') {
@@ -368,8 +415,8 @@ app.post('/api/scores', (req, res) => {
     });
 });
 
-// Get leaderboard (top scores)
-app.get('/api/leaderboard', (req, res) => {
+// Get leaderboard (top scores) (PROTECTED)
+app.get('/api/leaderboard', authenticateAdmin, (req, res) => {
     console.log('📊 Received GET /api/leaderboard request');
     
     if (!db || !dbReady) {
@@ -416,8 +463,8 @@ app.get('/api/leaderboard', (req, res) => {
     });
 });
 
-// Get all scores for export
-app.get('/api/scores/export', (req, res) => {
+// Get all scores for export (PROTECTED)
+app.get('/api/scores/export', authenticateAdmin, (req, res) => {
     if (!db || !dbReady) {
         console.error('❌ Database not available for scores export');
         return res.status(503).json({ 
@@ -650,8 +697,8 @@ app.post('/api/quiz-answers', (req, res) => {
     });
 });
 
-// Get all quiz answers for export
-app.get('/api/quiz-answers/export', (req, res) => {
+// Get all quiz answers for export (PROTECTED)
+app.get('/api/quiz-answers/export', authenticateAdmin, (req, res) => {
     console.log('📊 Received GET /api/quiz-answers/export request');
     
     if (!db || !dbReady) {
@@ -702,8 +749,8 @@ app.get('/api/quiz-answers/export', (req, res) => {
     });
 });
 
-// Get combined leaderboard with quiz answers
-app.get('/api/leaderboard-with-quiz', (req, res) => {
+// Get combined leaderboard with quiz answers (PROTECTED)
+app.get('/api/leaderboard-with-quiz', authenticateAdmin, (req, res) => {
     console.log('📊 Received GET /api/leaderboard-with-quiz request');
     
     if (!db || !dbReady) {
@@ -812,8 +859,8 @@ app.get('/api/leaderboard-with-quiz', (req, res) => {
     });
 });
 
-// Get formatted quiz answers (dedicated endpoint for better quiz data viewing)
-app.get('/api/quiz-answers/formatted', (req, res) => {
+// Get formatted quiz answers (dedicated endpoint for better quiz data viewing) (PROTECTED)
+app.get('/api/quiz-answers/formatted', authenticateAdmin, (req, res) => {
     console.log('📊 Received GET /api/quiz-answers/formatted request');
     
     if (!db || !dbReady) {
@@ -898,6 +945,384 @@ app.get('/api/quiz-answers/formatted', (req, res) => {
             });
         }
     });
+});
+
+// CSV Export Endpoint (PROTECTED)
+app.get('/api/quiz-answers/csv', authenticateAdmin, (req, res) => {
+    console.log('📊 Received GET /api/quiz-answers/csv request');
+    
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for CSV export');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
+    }
+    
+    const sql = `SELECT * FROM quiz_answers ORDER BY submitted_at DESC`;
+    
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            console.error('❌ Error exporting quiz answers to CSV:', err.message);
+            res.status(500).json({ error: 'Failed to export quiz answers to CSV' });
+        } else {
+            console.log(`✅ Exporting ${rows.length} quiz submissions to CSV`);
+            
+            // Define CSV headers
+            const headers = [
+                'ID', 'Session ID', 'Participant Name', 'Participant Email', 'Participant Mobile',
+                'Question 1 Part 1', 'Question 1 Part 2', 'Question 2', 
+                'Question 3 Part 1', 'Question 3 Part 2', 'Question 4 Part 1', 'Question 4 Part 2',
+                'Question 5 Part 1', 'Question 5 Part 2', 'Question 6',
+                'Recipient 1 Name', 'Recipient 1 Role', 'Recipient 2 Name', 'Recipient 2 Position',
+                'Question 7', 'Additional Comments', 'Submitted At', 'Created At'
+            ];
+            
+            // Create CSV content
+            let csvContent = headers.join(',') + '\n';
+            
+            rows.forEach(row => {
+                const csvRow = [
+                    row.id,
+                    `"${row.session_id || ''}"`,
+                    `"${(row.participant_name || '').replace(/"/g, '""')}"`,
+                    `"${row.participant_email || ''}"`,
+                    `"${row.participant_mobile || ''}"`,
+                    `"${(row.question1_part1 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question1_part2 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question2 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question3_part1 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question3_part2 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question4_part1 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question4_part2 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question5_part1 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question5_part2 || '').replace(/"/g, '""')}"`,
+                    `"${(row.question6 || '').replace(/"/g, '""')}"`,
+                    `"${(row.recipient1_name || '').replace(/"/g, '""')}"`,
+                    `"${(row.recipient1_role || '').replace(/"/g, '""')}"`,
+                    `"${(row.recipient2_name || '').replace(/"/g, '""')}"`,
+                    `"${(row.recipient2_position || '').replace(/"/g, '""')}"`,
+                    `"${(row.question7 || '').replace(/"/g, '""')}"`,
+                    `"${(row.additional_comments || '').replace(/"/g, '""')}"`,
+                    `"${row.submitted_at || ''}"`,
+                    `"${row.created_at || ''}"`
+                ];
+                csvContent += csvRow.join(',') + '\n';
+            });
+            
+            // Set headers for file download
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const filename = `quiz-answers-${timestamp}.csv`;
+            
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.send(csvContent);
+        }
+    });
+});
+
+// Excel XLSX Export Endpoint (PROTECTED)
+app.get('/api/quiz-answers/xlsx', authenticateAdmin, (req, res) => {
+    console.log('📊 Received GET /api/quiz-answers/xlsx request');
+    
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for Excel export');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
+    }
+    
+    const sql = `SELECT * FROM quiz_answers ORDER BY submitted_at DESC`;
+    
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            console.error('❌ Error exporting quiz answers to Excel:', err.message);
+            res.status(500).json({ error: 'Failed to export quiz answers to Excel' });
+        } else {
+            console.log(`✅ Exporting ${rows.length} quiz submissions to Excel`);
+            
+            try {
+                // Prepare data for Excel
+                const excelData = rows.map(row => ({
+                    'ID': row.id,
+                    'Session ID': row.session_id,
+                    'Participant Name': row.participant_name,
+                    'Participant Email': row.participant_email,
+                    'Participant Mobile': row.participant_mobile,
+                    'Question 1 Part 1': row.question1_part1,
+                    'Question 1 Part 2': row.question1_part2,
+                    'Question 2': row.question2,
+                    'Question 3 Part 1': row.question3_part1,
+                    'Question 3 Part 2': row.question3_part2,
+                    'Question 4 Part 1': row.question4_part1,
+                    'Question 4 Part 2': row.question4_part2,
+                    'Question 5 Part 1': row.question5_part1,
+                    'Question 5 Part 2': row.question5_part2,
+                    'Question 6': row.question6,
+                    'Recipient 1 Name': row.recipient1_name,
+                    'Recipient 1 Role': row.recipient1_role,
+                    'Recipient 2 Name': row.recipient2_name,
+                    'Recipient 2 Position': row.recipient2_position,
+                    'Question 7': row.question7,
+                    'Additional Comments': row.additional_comments,
+                    'Submitted At': row.submitted_at,
+                    'Created At': row.created_at
+                }));
+                
+                // Create workbook and worksheet
+                const workbook = xlsx.utils.book_new();
+                const worksheet = xlsx.utils.json_to_sheet(excelData);
+                
+                // Add worksheet to workbook
+                xlsx.utils.book_append_sheet(workbook, worksheet, 'Quiz Answers');
+                
+                // Generate Excel file buffer
+                const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+                
+                // Set headers for file download
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const filename = `quiz-answers-${timestamp}.xlsx`;
+                
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                res.send(excelBuffer);
+            } catch (xlsxError) {
+                console.error('❌ Error creating Excel file:', xlsxError.message);
+                res.status(500).json({ error: 'Failed to create Excel file', details: xlsxError.message });
+            }
+        }
+    });
+});
+
+// Combined Export Endpoint (Puzzle scores + Quiz answers) (PROTECTED)
+app.get('/api/export/combined', authenticateAdmin, (req, res) => {
+    console.log('📊 Received GET /api/export/combined request');
+    
+    if (!db || !dbReady) {
+        console.error('❌ Database not available or not ready for combined export');
+        return res.status(503).json({ 
+            error: 'Database not available', 
+            ready: dbReady,
+            dbError: dbError ? dbError.message : null
+        });
+    }
+    
+    const format = req.query.format || 'xlsx'; // Default to Excel, allow 'csv'
+    
+    // SQL query to join both tables
+    const sql = `SELECT 
+        s.id as score_id,
+        s.session_id,
+        s.name as puzzle_name,
+        s.email as puzzle_email,
+        s.completion_time,
+        s.time_string,
+        s.difficulty,
+        s.move_count,
+        s.accuracy,
+        s.completed_at as puzzle_completed_at,
+        s.results_code,
+        qa.id as quiz_id,
+        qa.participant_name as quiz_name,
+        qa.participant_email as quiz_email,
+        qa.participant_mobile,
+        qa.question1_part1,
+        qa.question1_part2,
+        qa.question2,
+        qa.question3_part1,
+        qa.question3_part2,
+        qa.question4_part1,
+        qa.question4_part2,
+        qa.question5_part1,
+        qa.question5_part2,
+        qa.question6,
+        qa.recipient1_name,
+        qa.recipient1_role,
+        qa.recipient2_name,
+        qa.recipient2_position,
+        qa.question7,
+        qa.additional_comments,
+        qa.submitted_at as quiz_submitted_at
+    FROM scores s
+    LEFT JOIN quiz_answers qa ON s.session_id = qa.session_id
+    ORDER BY s.completed_at DESC`;
+    
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            console.error('❌ Error exporting combined data:', err.message);
+            res.status(500).json({ error: 'Failed to export combined data' });
+        } else {
+            console.log(`✅ Exporting ${rows.length} combined records`);
+            
+            try {
+                if (format === 'csv') {
+                    // CSV Export
+                    const headers = [
+                        'Score ID', 'Session ID', 'Puzzle Name', 'Puzzle Email', 'Completion Time (ms)', 'Time String',
+                        'Difficulty', 'Move Count', 'Accuracy', 'Puzzle Completed At', 'Results Code',
+                        'Quiz ID', 'Quiz Name', 'Quiz Email', 'Mobile',
+                        'Question 1 Part 1', 'Question 1 Part 2', 'Question 2',
+                        'Question 3 Part 1', 'Question 3 Part 2', 'Question 4 Part 1', 'Question 4 Part 2',
+                        'Question 5 Part 1', 'Question 5 Part 2', 'Question 6',
+                        'Recipient 1 Name', 'Recipient 1 Role', 'Recipient 2 Name', 'Recipient 2 Position',
+                        'Question 7', 'Additional Comments', 'Quiz Submitted At'
+                    ];
+                    
+                    let csvContent = headers.join(',') + '\n';
+                    
+                    rows.forEach(row => {
+                        const csvRow = [
+                            row.score_id || '',
+                            `"${row.session_id || ''}"`,
+                            `"${(row.puzzle_name || '').replace(/"/g, '""')}"`,
+                            `"${row.puzzle_email || ''}"`,
+                            row.completion_time || '',
+                            `"${row.time_string || ''}"`,
+                            row.difficulty || '',
+                            row.move_count || '',
+                            row.accuracy || '',
+                            `"${row.puzzle_completed_at || ''}"`,
+                            `"${row.results_code || ''}"`,
+                            row.quiz_id || '',
+                            `"${(row.quiz_name || '').replace(/"/g, '""')}"`,
+                            `"${row.quiz_email || ''}"`,
+                            `"${row.participant_mobile || ''}"`,
+                            `"${(row.question1_part1 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question1_part2 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question2 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question3_part1 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question3_part2 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question4_part1 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question4_part2 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question5_part1 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question5_part2 || '').replace(/"/g, '""')}"`,
+                            `"${(row.question6 || '').replace(/"/g, '""')}"`,
+                            `"${(row.recipient1_name || '').replace(/"/g, '""')}"`,
+                            `"${(row.recipient1_role || '').replace(/"/g, '""')}"`,
+                            `"${(row.recipient2_name || '').replace(/"/g, '""')}"`,
+                            `"${(row.recipient2_position || '').replace(/"/g, '""')}"`,
+                            `"${(row.question7 || '').replace(/"/g, '""')}"`,
+                            `"${(row.additional_comments || '').replace(/"/g, '""')}"`,
+                            `"${row.quiz_submitted_at || ''}"`
+                        ];
+                        csvContent += csvRow.join(',') + '\n';
+                    });
+                    
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    const filename = `combined-export-${timestamp}.csv`;
+                    
+                    res.setHeader('Content-Type', 'text/csv');
+                    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                    res.send(csvContent);
+                } else {
+                    // Excel Export
+                    const excelData = rows.map(row => ({
+                        'Score ID': row.score_id,
+                        'Session ID': row.session_id,
+                        'Puzzle Name': row.puzzle_name,
+                        'Puzzle Email': row.puzzle_email,
+                        'Completion Time (ms)': row.completion_time,
+                        'Time String': row.time_string,
+                        'Difficulty': row.difficulty,
+                        'Move Count': row.move_count,
+                        'Accuracy': row.accuracy,
+                        'Puzzle Completed At': row.puzzle_completed_at,
+                        'Results Code': row.results_code,
+                        'Quiz ID': row.quiz_id,
+                        'Quiz Name': row.quiz_name,
+                        'Quiz Email': row.quiz_email,
+                        'Mobile': row.participant_mobile,
+                        'Question 1 Part 1': row.question1_part1,
+                        'Question 1 Part 2': row.question1_part2,
+                        'Question 2': row.question2,
+                        'Question 3 Part 1': row.question3_part1,
+                        'Question 3 Part 2': row.question3_part2,
+                        'Question 4 Part 1': row.question4_part1,
+                        'Question 4 Part 2': row.question4_part2,
+                        'Question 5 Part 1': row.question5_part1,
+                        'Question 5 Part 2': row.question5_part2,
+                        'Question 6': row.question6,
+                        'Recipient 1 Name': row.recipient1_name,
+                        'Recipient 1 Role': row.recipient1_role,
+                        'Recipient 2 Name': row.recipient2_name,
+                        'Recipient 2 Position': row.recipient2_position,
+                        'Question 7': row.question7,
+                        'Additional Comments': row.additional_comments,
+                        'Quiz Submitted At': row.quiz_submitted_at
+                    }));
+                    
+                    const workbook = xlsx.utils.book_new();
+                    const worksheet = xlsx.utils.json_to_sheet(excelData);
+                    
+                    xlsx.utils.book_append_sheet(workbook, worksheet, 'Combined Export');
+                    
+                    const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+                    
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                    const filename = `combined-export-${timestamp}.xlsx`;
+                    
+                    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                    res.send(excelBuffer);
+                }
+            } catch (exportError) {
+                console.error('❌ Error creating export file:', exportError.message);
+                res.status(500).json({ error: 'Failed to create export file', details: exportError.message });
+            }
+        }
+    });
+});
+
+// Web Query Files (.iqy) for Excel (PROTECTED)
+app.get('/api/iqy/quiz-answers', authenticateAdmin, (req, res) => {
+    console.log('📊 Received GET /api/iqy/quiz-answers request');
+    
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const iqyContent = `WEB
+1
+${baseUrl}/api/quiz-answers/export?format=raw
+
+Selection=EntirePage
+Formatting=None
+PreFormattedTextToColumns=True
+ConsecutiveDelimitersAsOne=True
+SingleBlockTextImport=False
+DisableDateRecognition=False
+DisableRedirections=False`;
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `quiz-answers-${timestamp}.iqy`;
+    
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(iqyContent);
+});
+
+app.get('/api/iqy/leaderboard', authenticateAdmin, (req, res) => {
+    console.log('📊 Received GET /api/iqy/leaderboard request');
+    
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const iqyContent = `WEB
+1
+${baseUrl}/api/leaderboard?limit=100
+
+Selection=EntirePage
+Formatting=None
+PreFormattedTextToColumns=True
+ConsecutiveDelimitersAsOne=True
+SingleBlockTextImport=False
+DisableDateRecognition=False
+DisableRedirections=False`;
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `leaderboard-${timestamp}.iqy`;
+    
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(iqyContent);
 });
 
 // Get statistics
@@ -1020,17 +1445,25 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`📊 Database ready: ${dbReady}`);
     console.log(`⚡ Uptime: ${process.uptime().toFixed(2)}s`);
     console.log('📡 API endpoints:');
+    console.log('🔓 PUBLIC ENDPOINTS:');
     console.log('  GET /api/health - Enhanced health check');
     console.log('  POST /api/scores - Save a new score');
-    console.log('  GET /api/leaderboard - Get top scores');
-    console.log('  GET /api/scores/export - Export all scores');
     console.log('  POST /api/quiz-answers/check-duplicate - Check for duplicate quiz submissions');
     console.log('  POST /api/check-duplicate-email - Check for duplicate email across both tables');
     console.log('  POST /api/quiz-answers - Submit quiz answers');
+    console.log('  GET /api/stats - Get statistics');
+    console.log('🔒 PROTECTED ENDPOINTS (require admin authentication):');
+    console.log('  GET /api/leaderboard - Get top scores');
+    console.log('  GET /api/scores/export - Export all scores');
     console.log('  GET /api/quiz-answers/export - Export all quiz answers (supports ?format=raw|formatted)');
+    console.log('  GET /api/quiz-answers/csv - Export quiz answers as CSV file');
+    console.log('  GET /api/quiz-answers/xlsx - Export quiz answers as Excel file');
+    console.log('  GET /api/export/combined - Export combined puzzle scores and quiz answers (supports ?format=csv|xlsx)');
+    console.log('  GET /api/iqy/quiz-answers - Generate Excel web query file for quiz answers');
+    console.log('  GET /api/iqy/leaderboard - Generate Excel web query file for leaderboard');
     console.log('  GET /api/quiz-answers/formatted - Dedicated formatted quiz data viewer with pagination');
     console.log('  GET /api/leaderboard-with-quiz - Get combined leaderboard with quiz data (supports ?format=raw|formatted)');
-    console.log('  GET /api/stats - Get statistics');
+    console.log('🔑 Authentication: Use Authorization: Bearer <token>, X-Admin-Token header, or ?token= query parameter');
     console.log('🚀 =================================');
     console.log('✅ Server ready to accept connections');
     console.log('🔗 Health check: http://0.0.0.0:' + PORT + '/api/health');

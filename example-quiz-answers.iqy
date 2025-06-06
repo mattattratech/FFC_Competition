@@ -1,0 +1,11 @@
+WEB
+1
+https://your-domain.com/api/quiz-answers/export?format=raw
+
+Selection=EntirePage
+Formatting=None
+PreFormattedTextToColumns=True
+ConsecutiveDelimitersAsOne=True
+SingleBlockTextImport=False
+DisableDateRecognition=False
+DisableRedirections=False

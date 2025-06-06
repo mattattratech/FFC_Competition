@@ -1,0 +1,11 @@
+WEB
+1
+https://your-domain.com/api/leaderboard?limit=100
+
+Selection=EntirePage
+Formatting=None
+PreFormattedTextToColumns=True
+ConsecutiveDelimitersAsOne=True
+SingleBlockTextImport=False
+DisableDateRecognition=False
+DisableRedirections=False
