@@ -1529,7 +1529,7 @@
             
             <div class="thank-you-actions">
                 <button type="button" class="btn success" onclick="closeThankYouModal()">Close</button>
-                <button type="button" class="btn secondary" onclick="redirectToMain()">Visit Tratech Website</button>
+                <button type="button" class="btn secondary" onclick="redirectToMain()">Visit Tratech Website ↗</button>
             </div>
         </div>
     </div>
@@ -3190,8 +3190,8 @@ Completed: ${completedDate.split('T')[0]} at ${completedDate.split('T')[1].split
             // Optional: Add any cleanup before redirect
             localStorage.removeItem('puzzleGameState');
             
-            // Redirect to Tratech website
-            window.location.href = 'https://tratechconsulting.co.uk';
+            // Open Tratech website in a new window/tab
+            window.open('https://tratechconsulting.co.uk', '_blank', 'noopener,noreferrer');
         }
         
         async function checkForDuplicateEntry(email, name) {
