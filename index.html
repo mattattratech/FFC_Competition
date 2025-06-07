@@ -2544,9 +2544,72 @@
             
             doRender() {
                 console.log('Rendering - canvas size:', this.canvasSize, 'pieces:', this.pieces.length);
+                
+                // Validate and fix any pieces with invalid positions before rendering
+                this.validatePiecePositions();
+                
                 // Only clear and redraw when necessary
                 this.renderStaticContent();
                 this.renderDraggedPiece();
+            }
+            
+            validatePiecePositions() {
+                this.pieces.forEach(piece => {
+                    // Check if piece has invalid position (NaN, undefined, or out of bounds)
+                    if (isNaN(piece.x) || isNaN(piece.y) || piece.x === undefined || piece.y === undefined) {
+                        console.warn(`⚠️ Piece ${piece.id} has invalid position: x=${piece.x}, y=${piece.y}`);
+                        console.log('🔧 Recovering piece to safe position');
+                        
+                        if (piece.placed && piece.currentRow >= 0 && piece.currentCol >= 0) {
+                            // Piece should be on grid - fix its position
+                            piece.x = piece.currentCol * this.pieceWidth;
+                            piece.y = piece.currentRow * this.pieceHeight;
+                            console.log(`✅ Fixed placed piece ${piece.id} position to (${piece.x}, ${piece.y})`);
+                        } else {
+                            // Piece should be in pieces area - find a safe spot
+                            const availablePosition = this.findAvailablePositionInPiecesArea();
+                            piece.placed = false;
+                            piece.currentRow = -1;
+                            piece.currentCol = -1;
+                            piece.x = availablePosition.x;
+                            piece.y = availablePosition.y;
+                            console.log(`✅ Recovered unplaced piece ${piece.id} to pieces area at (${piece.x}, ${piece.y})`);
+                        }
+                    }
+                    
+                    // CRITICAL: Ensure visual and logical positions are synchronized for placed pieces
+                    if (piece.placed && piece.currentRow >= 0 && piece.currentCol >= 0) {
+                        const expectedX = piece.currentCol * this.pieceWidth;
+                        const expectedY = piece.currentRow * this.pieceHeight;
+                        
+                        // Allow small tolerance for floating point precision
+                        const tolerance = 2;
+                        if (Math.abs(piece.x - expectedX) > tolerance || Math.abs(piece.y - expectedY) > tolerance) {
+                            console.warn(`⚠️ Piece ${piece.id} visual/logical position mismatch:`);
+                            console.warn(`  Visual: (${piece.x}, ${piece.y})`);
+                            console.warn(`  Expected: (${expectedX}, ${expectedY}) for grid (${piece.currentRow}, ${piece.currentCol})`);
+                            
+                            // Fix the visual position to match logical position
+                            piece.x = expectedX;
+                            piece.y = expectedY;
+                            console.log(`✅ Synchronized piece ${piece.id} visual position to (${piece.x}, ${piece.y})`);
+                        }
+                    }
+                    
+                    // Ensure pieces area pieces don't go outside canvas bounds
+                    if (!piece.placed) {
+                        const maxX = this.canvasSize - this.pieceWidth;
+                        const maxY = this.canvasSize - this.pieceHeight;
+                        
+                        if (piece.x < 0 || piece.x > maxX || piece.y < 0 || piece.y > maxY) {
+                            console.warn(`⚠️ Piece ${piece.id} outside pieces canvas bounds: (${piece.x}, ${piece.y})`);
+                            const safePosition = this.findAvailablePositionInPiecesArea();
+                            piece.x = safePosition.x;
+                            piece.y = safePosition.y;
+                            console.log(`✅ Moved piece ${piece.id} to safe position: (${piece.x}, ${piece.y})`);
+                        }
+                    }
+                });
             }
             
             renderStaticContent() {
@@ -2857,12 +2920,24 @@
             }
             
             snapBackToOriginal() {
-                if (!this.draggedPiece || !this.originalPosition) return;
+                if (!this.draggedPiece || !this.originalPosition) {
+                    console.error('❌ Cannot snap back - missing draggedPiece or originalPosition');
+                    console.log('draggedPiece:', this.draggedPiece ? this.draggedPiece.id : 'null');
+                    console.log('originalPosition:', this.originalPosition);
+                    
+                    // If we have a dragged piece but no original position, try to find a safe spot
+                    if (this.draggedPiece && !this.originalPosition) {
+                        console.log('🔧 Attempting to recover piece to pieces area');
+                        this.recoverPieceToSafePosition(this.draggedPiece);
+                    }
+                    return;
+                }
                 
                 const piece = this.draggedPiece;
                 const originalPos = this.originalPosition;
                 
                 console.log(`⬅️ Immediately snapping piece ${piece.id} back to original position`);
+                console.log(`Original position: x=${originalPos.x}, y=${originalPos.y}, placed=${originalPos.placed}`);
                 
                 // Immediately restore to original position - no animation
                 piece.x = originalPos.x;
@@ -2871,12 +2946,6 @@
                 piece.currentRow = originalPos.currentRow;
                 piece.currentCol = originalPos.currentCol;
                 
-                // Clear drag state immediately
-                this.draggedPiece = null;
-                this.dragSource = null;
-                this.originalPosition = null;
-                document.body.classList.remove('dragging');
-                
                 // Force immediate re-render
                 this.staticContentDirty = true;
                 this.forceRender();
@@ -2884,6 +2953,28 @@
                 this.saveToStorage();
                 
                 console.log(`✅ Piece ${piece.id} snapped back immediately`);
+            }
+            
+            recoverPieceToSafePosition(piece) {
+                console.log(`🆘 Recovering piece ${piece.id} to safe position in pieces area`);
+                
+                // Find a safe position in the pieces area
+                const availablePosition = this.findAvailablePositionInPiecesArea();
+                
+                // Reset piece state
+                piece.placed = false;
+                piece.currentRow = -1;
+                piece.currentCol = -1;
+                piece.x = availablePosition.x;
+                piece.y = availablePosition.y;
+                
+                // Force immediate re-render
+                this.staticContentDirty = true;
+                this.forceRender();
+                this.updateDisplay();
+                this.saveToStorage();
+                
+                console.log(`✅ Piece ${piece.id} recovered to pieces area at (${piece.x}, ${piece.y})`);
             }
             
             onMouseDown(e, canvasType) {
@@ -2999,13 +3090,9 @@
                     console.log('Mouse up - checking drop for piece', this.draggedPiece.id);
                     this.checkDrop(e);
                     
-                    // Clear drag state
-                    console.log('Clearing drag state');
-                    const wasDropped = this.draggedPiece;
-                    this.draggedPiece = null;
-                    this.dragSource = null;
-                    this.originalPosition = null;
-                    document.body.classList.remove('dragging');
+                    // Clear drag state (checkDrop handles its own cleanup)
+                    console.log('Clearing remaining drag state');
+                    this.clearDragState();
                     
                     // Force a complete re-render to ensure UI is updated
                     this.staticContentDirty = true;
@@ -3103,12 +3190,9 @@
                     console.log('Touch end - checking drop');
                     this.checkDrop(e);
                     
-                    // Clear drag state
-                    console.log('Clearing touch drag state');
-                    this.draggedPiece = null;
-                    this.dragSource = null;
-                    this.originalPosition = null;
-                    document.body.classList.remove('dragging');
+                    // Clear drag state (checkDrop handles its own cleanup)
+                    console.log('Clearing remaining touch drag state');
+                    this.clearDragState();
                     
                     // Force a complete re-render to ensure UI is updated
                     this.staticContentDirty = true;
@@ -3116,6 +3200,13 @@
                     console.log('Forced re-render after touch end');
                 }
                 // If not dragging, allow normal touch behavior (no preventDefault)
+            }
+            
+            clearDragState() {
+                this.draggedPiece = null;
+                this.dragSource = null;
+                this.originalPosition = null;
+                document.body.classList.remove('dragging');
             }
             
             checkDrop(e) {
@@ -3280,10 +3371,12 @@
                 piece.currentRow = row;
                 piece.currentCol = col;
                 
-                // Check if correct placement and update move counts
-                this.moveCount++;
-                console.log(`Total moves: ${this.moveCount}`);
+                // CRITICAL: Set visual position to match logical position
+                piece.x = col * this.pieceWidth;
+                piece.y = row * this.pieceHeight;
+                console.log(`Set piece ${piece.id} visual position to (${piece.x}, ${piece.y}) for grid position (${row}, ${col})`);
                 
+                // Check if correct placement (move count already incremented in checkDrop)
                 if (row === piece.correctRow && col === piece.correctCol) {
                     this.correctMoves++;
                     console.log(`✅ Correct placement! Piece ${piece.id} in right spot (${this.correctMoves}/${this.moveCount} correct)`);
@@ -3340,7 +3433,10 @@
                     occupiedPiece.currentRow = this.originalPosition.currentRow;
                     occupiedPiece.currentCol = this.originalPosition.currentCol;
                     occupiedPiece.placed = true;
-                    console.log(`Occupied piece ${occupiedPiece.id} moved to grid position (${this.originalPosition.currentRow}, ${this.originalPosition.currentCol})`);
+                    // CRITICAL: Set visual position for occupied piece
+                    occupiedPiece.x = this.originalPosition.currentCol * this.pieceWidth;
+                    occupiedPiece.y = this.originalPosition.currentRow * this.pieceHeight;
+                    console.log(`Occupied piece ${occupiedPiece.id} moved to grid position (${this.originalPosition.currentRow}, ${this.originalPosition.currentCol}) with visual position (${occupiedPiece.x}, ${occupiedPiece.y})`);
                 } else {
                     // Move occupied piece back to pieces area
                     occupiedPiece.placed = false;
@@ -3351,12 +3447,32 @@
                     console.log(`Occupied piece ${occupiedPiece.id} moved back to pieces area at (${occupiedPiece.x}, ${occupiedPiece.y})`);
                 }
                 
-                // Place dragged piece in new position immediately
-                // Note: placePieceImmediately will handle move count increment
-                this.placePieceImmediately(draggedPiece, newRow, newCol);
+                // Place dragged piece in new position (without calling checkWin yet)
+                draggedPiece.placed = true;
+                draggedPiece.currentRow = newRow;
+                draggedPiece.currentCol = newCol;
                 
-                // Update display and save
+                // CRITICAL: Set visual position for dragged piece
+                draggedPiece.x = newCol * this.pieceWidth;
+                draggedPiece.y = newRow * this.pieceHeight;
+                console.log(`Dragged piece ${draggedPiece.id} visual position set to (${draggedPiece.x}, ${draggedPiece.y}) for grid position (${newRow}, ${newCol})`);
+                
+                
+                // Check if correct placement for dragged piece
+                if (newRow === draggedPiece.correctRow && newCol === draggedPiece.correctCol) {
+                    this.correctMoves++;
+                    console.log(`✅ Correct placement after swap! Piece ${draggedPiece.id} in right spot`);
+                } else {
+                    console.log(`❌ Incorrect placement after swap! Piece ${draggedPiece.id} should be at (${draggedPiece.correctRow}, ${draggedPiece.correctCol}) but placed at (${newRow}, ${newCol})`);
+                }
+                
+                // Force immediate re-render
+                this.staticContentDirty = true;
+                this.forceRender();
+                
+                // Update display and check win only after both pieces are positioned
                 this.updateDisplay();
+                this.checkWin();
                 this.saveToStorage();
                 
                 console.log(`✅ Piece swap completed successfully`);
@@ -3417,18 +3533,54 @@
             }
             
             checkWin() {
+                // Clear any existing win check timeout to prevent multiple checks
+                if (this.winCheckTimeout) {
+                    clearTimeout(this.winCheckTimeout);
+                }
+                
+                // Delay the win check slightly to ensure all piece operations are complete
+                this.winCheckTimeout = setTimeout(() => {
+                    this.doWinCheck();
+                }, 50); // 50ms delay
+            }
+            
+            doWinCheck() {
                 const allPlaced = this.pieces.every(piece => piece.placed);
                 const allCorrect = this.pieces.every(piece => 
                     piece.currentRow === piece.correctRow && 
                     piece.currentCol === piece.correctCol);
                 
+                // Enhanced debugging for production issues
+                console.log('🔍 CheckWin Debug:');
+                console.log(`Total pieces: ${this.pieces.length}`);
+                console.log(`All placed: ${allPlaced}`);
+                console.log(`All correct: ${allCorrect}`);
+                console.log(`Game completed: ${this.gameCompleted}`);
+                
+                // Log individual piece states for debugging
+                const incorrectPieces = this.pieces.filter(piece => 
+                    !piece.placed || piece.currentRow !== piece.correctRow || piece.currentCol !== piece.correctCol
+                );
+                
+                if (incorrectPieces.length > 0) {
+                    console.log('❌ Incorrect pieces:');
+                    incorrectPieces.forEach(piece => {
+                        console.log(`Piece ${piece.id}: placed=${piece.placed}, current=(${piece.currentRow},${piece.currentCol}), correct=(${piece.correctRow},${piece.correctCol})`);
+                    });
+                } else {
+                    console.log('✅ All pieces correctly placed!');
+                }
+                
                 if (allPlaced && allCorrect && !this.gameCompleted) {
+                    console.log('🎉 PUZZLE COMPLETED! Triggering completion sequence...');
                     this.gameCompleted = true;
                     this.endTime = Date.now();
                     this.stopTimer();
                     this.updateDisplay();
                     this.showCompletionModal();
                     this.saveToStorage();
+                } else if (allPlaced && allCorrect && this.gameCompleted) {
+                    console.log('⚠️ Puzzle already completed, skipping duplicate completion');
                 }
             }
             
